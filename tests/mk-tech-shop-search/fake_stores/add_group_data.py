@@ -2,7 +2,7 @@
 catalogues: a Setec bare-code Sony headphone with its marketed-name listings,
 JBL Live 770NC in each shop's title style (spaced code, WHT, LIVE770NCBLK,
 Sand). Idempotent: records with ids starting 'G' are replaced. The committed data/ already
-holds them; rerun this by hand (python3 tests/fake_stores/add_group_data.py) after editing it."""
+holds them; rerun this by hand (python3 tests/mk-tech-shop-search/fake_stores/add_group_data.py) after editing it."""
 import json, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = {"setec": "https://setec.mk/products/", "anhoch": "https://www.anhoch.com/products/",

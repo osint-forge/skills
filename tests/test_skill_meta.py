@@ -83,7 +83,12 @@ def main():
                 os.path.exists(lic) and read(lic).split()[0] == fields["license"],
                 fields["license"],
             )
-        check(f"{name}: root README lists the skill", name in readme, name)
+        catalog_row = re.search(
+            r"^\s*\|\s*\[`?" + re.escape(name) + r"`?\]\(skills/" + re.escape(name) + r"/?\)",
+            readme,
+            re.M,
+        )
+        check(f"{name}: root README has a catalogue row", catalog_row is not None, name)
 
         docs = [skill_md]
         skill_readme = os.path.join(skill_dir, "README.md")
