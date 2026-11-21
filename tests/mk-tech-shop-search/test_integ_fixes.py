@@ -4,13 +4,17 @@
 # ///
 """Offline regression tests for mkshop.py and the store clients, from the fixes made during the
 live integration runs (2026-10-03 onwards). Titles are real listings seen in those runs.
-Run: python3 -B tests/test_integ_fixes.py"""
+Run: python3 -B tests/mk-tech-shop-search/test_integ_fixes.py"""
 import sys
 sys.dont_write_bytecode = True
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
 import os as _pos
 # The skill under test: this checkout's copy, or MKSHOP_SKILL_DIR (e.g. an installed copy).
 SKILL = _pos.environ.get("MKSHOP_SKILL_DIR") or _pos.path.join(
-    _pos.path.dirname(_pos.path.dirname(_pos.path.abspath(__file__))), "skills", "mk-tech-shop-search")
+    _pos.path.dirname(_pos.path.dirname(_pos.path.dirname(_pos.path.abspath(__file__)))),
+    "skills", "mk-tech-shop-search")
 sys.path.insert(0, SKILL + "/scripts")
 import mkshop as m  # noqa: E402
 

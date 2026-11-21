@@ -2,9 +2,10 @@
 # requires-python = ">=3.9"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
-"""Offline checks that the skill's docs match its code: SKILL.md frontmatter, every shop has a
-reference and a table row, and every command and --flag the docs name exists in mkshop.py or
-the store client the doc is about. Run: python3 -B tests/test_docs.py"""
+"""Offline checks that the skill's docs match its code: every shop has a reference and a
+table row, and every command and --flag the docs name exists in mkshop.py or the store
+client the doc is about. Frontmatter, size and hidden-text checks for every skill live in
+tests/test_skill_meta.py. Run: python3 -B tests/mk-tech-shop-search/test_docs.py"""
 import argparse
 import glob
 import os
@@ -13,9 +14,13 @@ import subprocess
 import sys
 
 sys.dont_write_bytecode = True
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
 # The skill under test: this checkout's copy, or MKSHOP_SKILL_DIR (e.g. an installed copy).
 SKILL = os.environ.get("MKSHOP_SKILL_DIR") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "skills", "mk-tech-shop-search")
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "skills", "mk-tech-shop-search")
 sys.path.insert(0, os.path.join(SKILL, "scripts"))
 import mkshop as m  # noqa: E402
 
@@ -34,28 +39,7 @@ def read(rel):
         return f.read()
 
 
-# ---- frontmatter: the portable Agent Skills fields only (agentskills.io/specification)
 skill_md = read("SKILL.md")
-fm = re.match(r"---\n(.*?)\n---\n", skill_md, re.S)
-check("SKILL.md starts with a frontmatter block", fm is not None)
-fields = dict(re.findall(r"^([a-z][a-z-]*): ?(.*)$", fm.group(1), re.M)) if fm else {}
-check("frontmatter keys are portable",
-      set(fields) <= {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}, set(fields))
-name, desc = fields.get("name", ""), fields.get("description", "")
-check("name matches the skill directory", name == os.path.basename(os.path.normpath(SKILL)), name)
-check("name is 1-64 lowercase letters, digits and single hyphens",
-      re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name) is not None and len(name) <= 64, name)
-check("description is 1-1024 characters", 0 < len(desc) <= 1024, len(desc))
-check("description has no angle brackets and no unquoted ': '",
-      not re.search(r"[<>]", desc) and (": " not in desc or desc[:1] in "\"'"), desc[:80])
-check("SKILL.md body stays under 500 lines", skill_md.count("\n") < 500, skill_md.count("\n"))
-check("compatibility, when present, is 1-500 characters",
-      "compatibility" not in fields or 0 < len(fields["compatibility"]) <= 500, len(fields.get("compatibility", "")))
-_lic = os.path.join(os.path.dirname(os.path.dirname(os.path.normpath(SKILL))), "LICENSE")
-if "license" in fields and os.path.exists(_lic):
-    with open(_lic, encoding="utf-8") as f:
-        check("frontmatter license matches the repo's LICENSE file", f.readline().split()[0] == fields["license"],
-              fields["license"])
 
 # ---- every shop: a reference file and a row in SKILL.md's store table
 refs = {os.path.basename(p)[:-3] for p in glob.glob(os.path.join(SKILL, "references", "*.md"))}
@@ -77,7 +61,8 @@ def client_surface(script):
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
 
     def helptext(args):
-        p = subprocess.run([sys.executable, "-B"] + args + ["-h"], capture_output=True, text=True, env=env, timeout=60)
+        p = subprocess.run([sys.executable, "-B"] + args + ["-h"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", env=env, timeout=60)
         return p.stdout + p.stderr
 
     top = helptext(pre)
@@ -137,23 +122,6 @@ check("every script has a PEP 723 header", all(_headers.values()), [k for k, v i
 check("the headers are identical and name requests and beautifulsoup4",
       len(set(_headers.values())) == 1 and all(d in next(iter(_headers.values())) or "" for d in ("requests", "beautifulsoup4")),
       set(_headers.values()))
-
-# ---- no hidden text: invisible format/bidi characters, variation selectors or Unicode tags in the
-# skill's instructions and code, or in the tests (write them as \u escapes)
-import unicodedata  # noqa: E402
-_repo = os.path.dirname(os.path.dirname(os.path.normpath(SKILL)))
-_srcs = [p for p in glob.glob(os.path.join(SKILL, "**", "*"), recursive=True) if p.endswith((".md", ".py", ".html"))]
-_srcs += glob.glob(os.path.join(_repo, "tests", "*.py")) + [os.path.join(_repo, "README.md")]
-_hidden = []
-for _p in _srcs:
-    if not os.path.isfile(_p):
-        continue
-    with open(_p, encoding="utf-8") as f:
-        for _n, _line in enumerate(f, 1):
-            if any(unicodedata.category(c) == "Cf" or 0xFE00 <= ord(c) <= 0xFE0F or 0xE0100 <= ord(c) <= 0xE01EF
-                   for c in _line):
-                _hidden.append(f"{os.path.relpath(_p, _repo)}:{_n}")
-check("no invisible or bidi characters in the skill, its tests or the README", not _hidden, _hidden[:10])
 
 print(f"\n{fails} failure(s)")
 sys.exit(1 if fails else 0)

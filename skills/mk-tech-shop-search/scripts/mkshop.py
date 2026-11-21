@@ -2468,6 +2468,14 @@ def overall_exit(statuses):
 # --------------------------------------------------------------------------
 # Command: stores
 # --------------------------------------------------------------------------
+def _client_path(path):
+    """A display path for a client, absolute when it lives on another drive (Windows)."""
+    try:
+        return os.path.relpath(path, HERE)
+    except ValueError:
+        return path
+
+
 def cmd_stores(ctx, a):
     keys = parse_stores(a.stores, a.exclude)
     infos = ctx.infos(keys)
@@ -2478,7 +2486,7 @@ def cmd_stores(ctx, a):
         caps = inf.get("capabilities") if isinstance(inf.get("capabilities"), list) else None
         rows.append({
             "store": k, "name": inf.get("name") or st["name"],
-            "client": os.path.relpath(ctx.script(k), HERE) + (" " + " ".join(st["args"]) if st["args"] else ""),
+            "client": _client_path(ctx.script(k)) + (" " + " ".join(st["args"]) if st["args"] else ""),
             "domains": st["domains"], "base_url": inf.get("base_url") or f"https://{st['domains'][0]}",
             "sells": inf.get("sells") or st["sells"],
             "capabilities": caps,

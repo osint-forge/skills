@@ -177,7 +177,9 @@ def main(store=None):
         return run(store, a)
     finally:
         if os.environ.get("FAKE_LOG"):
-            with open(os.environ["FAKE_LOG"], "a") as f:
+            # One file per process: concurrent appends to one file lose lines on Windows.
+            path = f"{os.environ['FAKE_LOG']}.{os.getpid()}"
+            with open(path, "a", encoding="utf-8") as f:
                 f.write(f"{store}\t{os.getpid()}\t{t0:.3f}\t{time.time():.3f}\t{a.cmd}\t{getattr(a, 'query', '')}\n")
 
 
