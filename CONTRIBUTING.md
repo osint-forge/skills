@@ -38,7 +38,7 @@ tests/<name>/
 name: my-skill
 description: What it does and when an agent should use it. Name the triggers and the boundary in one line, under 1024 characters.
 license: MIT
-compatibility: Python 3.9+ with requests; outbound HTTPS to api.example.mk
+compatibility: Python 3.13+ with requests; outbound HTTPS to api.example.mk
 ---
 ```
 
@@ -93,7 +93,7 @@ fixtures or fake clients under `tests/<name>/`.
 ## Linting
 
 - **Python:** `uvx ruff@0.14.6 check .` uses [`ruff.toml`](ruff.toml). It targets
-  Python 3.9 and currently checks pyflakes, syntax and bare-except errors. Add rules
+  Python 3.13 and currently checks pyflakes, syntax and bare-except errors. Add rules
   only with a plan to fix the existing findings.
 - **Markdown:** `npx --yes markdownlint-cli2@0.24.2 "**/*.md"` uses
   [`.markdownlint.json`](.markdownlint.json). Line length and inline HTML are

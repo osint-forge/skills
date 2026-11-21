@@ -76,7 +76,7 @@ npx --yes html-validate@10.4.0 "**/*.html"
 docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12
 ```
 
-CI runs the suite on Ubuntu 24.04 with Python 3.9 and Windows with Python 3.13,
+CI runs the suite on Ubuntu and Windows with Python 3.13,
 plus Ruff, markdownlint, html-validate and actionlint. No test needs network access;
 live shop checks are manual.
 

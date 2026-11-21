@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
 """
@@ -24,7 +24,7 @@ Commands
               (EAN, then model codes / part numbers), offers sorted by price
 
 Run any command with -h for its flags. mkshop.py itself uses only the
-standard library; the store clients need Python 3.9+ with requests and
+standard library; the store clients need Python 3.13+ with requests and
 beautifulsoup4 (MKSHOP_PYTHON picks the interpreter that runs them).
 
 Store keys: setec anhoch neksio ddstore neptun hivetec gjirafa50 zirafamall

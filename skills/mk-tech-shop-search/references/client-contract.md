@@ -1,7 +1,7 @@
 # Store client contract
 
 Every store has one self-contained client at `scripts/stores/<key>.py`
-(Python 3.9+ standard library plus `requests` and `bs4`; no imports between
+(Python 3.13+ standard library plus `requests` and `bs4`; no imports between
 store files). Each starts with the same PEP 723 header as `mkshop.py`
 (`# /// script` with the two dependencies), so `uv run` works on any of them
 and they all share one cached environment. `scripts/mkshop.py`

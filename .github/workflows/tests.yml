@@ -16,7 +16,7 @@ concurrency:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout Repository
@@ -56,9 +56,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # One Ubuntu version; Python 3.9 is the oldest version the skills support.
-          - os: ubuntu-24.04
-            python: "3.9"
+          # One Python version; Ubuntu latest and Windows.
+          - os: ubuntu-latest
+            python: "3.13"
           - os: windows-latest
             python: "3.13"
     env:

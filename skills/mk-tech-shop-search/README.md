@@ -40,7 +40,7 @@ Copy or symlink this directory into your agent's skills folder, for example
 
 ### Without uv
 
-Use Python 3.9 or newer and install the two packages yourself:
+Use Python 3.13 or newer and install the two packages yourself:
 
 ```bash
 python3 -m pip install requests beautifulsoup4
@@ -98,7 +98,7 @@ uv run tests/test_skill_meta.py                       # repo-wide skill checks: 
 ```
 
 Or run the whole repository suite with `uv run tests/run_all.py`. CI runs the tests on
-Ubuntu 24.04 with Python 3.9 and on Windows with Python 3.13.
+Ubuntu and Windows with Python 3.13.
 
 ### Shop clients
 

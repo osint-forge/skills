@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # ///
 """Repository-wide checks for every skill under skills/: portable frontmatter, naming,
 documentation limits, local links, a catalogue row in the root README, and hidden text.
