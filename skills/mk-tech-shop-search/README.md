@@ -98,7 +98,7 @@ uv run tests/test_skill_meta.py                       # repo-wide skill checks: 
 ```
 
 Or run the whole repository suite with `uv run tests/run_all.py`. CI runs the tests on
-Linux with Python 3.9 and 3.14, and on Windows with Python 3.13.
+Ubuntu 24.04 with Python 3.9 and on Windows with Python 3.13.
 
 ### Shop clients
 

@@ -84,6 +84,7 @@ over a thousand products takes about half a minute, mostly parsing). `detail` ta
 SMART price range and child categories (1 request each, max 40). Tokens: `brand=<id|name>[,...]`,
 `sub=<id|name>[,...]`, `price=MIN-MAX` and `stock=1`. Commas OR within a token; repeated flags AND.
 `sub=` must name a category under the one being listed (`list 3833 --filter sub=4335` exits 2).
+
 - **The server takes one brand id per request** (a comma gives an empty body), so the client runs
   one walk per brand and merges them.
 - **The server's `pricerange` filters the regular price**, which is ≥ the SMART price. The client

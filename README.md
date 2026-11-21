@@ -67,8 +67,18 @@ uv run tests/run_all.py --list
 uv run tests/run_all.py --filter mk-tech-shop-search
 ```
 
-CI runs the suites on Linux with Python 3.9 and 3.14, and on Windows with Python 3.13.
-No test needs network access; live shop checks are manual.
+Lint the repository:
+
+```bash
+uvx ruff@0.14.6 check .
+npx --yes markdownlint-cli2@0.24.2 "**/*.md"
+npx --yes html-validate@10.4.0 "**/*.html"
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12
+```
+
+CI runs the suite on Ubuntu 24.04 with Python 3.9 and Windows with Python 3.13,
+plus Ruff, markdownlint, html-validate and actionlint. No test needs network access;
+live shop checks are manual.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before adding a skill.
 

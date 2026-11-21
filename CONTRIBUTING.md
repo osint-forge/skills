@@ -44,7 +44,7 @@ compatibility: Python 3.9+ with requests; outbound HTTPS to api.example.mk
 
 - `name`: 1-64 lowercase letters, digits and single hyphens; it must equal the
   directory name.
-- `description`: one line, no angle brackets, no unescaped `: `. Say what the skill
+- `description`: one line, no angle brackets, no unescaped colon followed by a space. Say what the skill
   does and when to use it; this is what an agent sees before loading the skill.
 - `license`: must match the repository's `LICENSE` when present.
 - `compatibility`: optional, under 500 characters. State the runtime, dependencies and
@@ -90,9 +90,23 @@ fixtures or fake clients under `tests/<name>/`.
 - A skill-specific validator belongs in `tests/<name>/`; repository-wide checks
   belong in `tests/test_skill_meta.py`.
 
+## Linting
+
+- **Python:** `uvx ruff@0.14.6 check .` uses [`ruff.toml`](ruff.toml). It targets
+  Python 3.9 and currently checks pyflakes, syntax and bare-except errors. Add rules
+  only with a plan to fix the existing findings.
+- **Markdown:** `npx --yes markdownlint-cli2@0.24.2 "**/*.md"` uses
+  [`.markdownlint.json`](.markdownlint.json). Line length and inline HTML are
+  allowed because the skill references deliberately use tables and XML tags.
+- **HTML:** `npx --yes html-validate@10.4.0 "**/*.html"`.
+- **Workflows:** `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12`
+  from the repository root, or rely on the CI lint job.
+
 ## Before opening a PR
 
 - `uv run tests/run_all.py` passes.
+- `uvx ruff@0.14.6 check .` and the Markdown and HTML linters pass.
+- Actionlint passes if `.github/workflows/` changed.
 - The new skill appears in the root README.
 - `SKILL.md` and `README.md` agree on install, requirements and network hosts.
 - No secrets, tokens, customer data or generated caches are included.

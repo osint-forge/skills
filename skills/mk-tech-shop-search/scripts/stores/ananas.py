@@ -1109,7 +1109,7 @@ class Ananas:
         ex = (data.get("exhaustive") or {}).get("facetsCount", data.get("exhaustiveFacetsCount"))
         log(f"category {t['label']}: {nb} listings, {len(rest)} facet attributes, {len(recs)} values"
             + ("" if ex is not False else " (Algolia flags facet counts as approximate)")
-            + f"; the category page's own filter widgets: "
+            + "; the category page's own filter widgets: "
             + (", ".join(a.rsplit(".", 1)[-1] for a in order) or "none beyond brand/price/flags"))
         return recs
 

@@ -32,7 +32,7 @@ PATH and prints only the record count to stdout. Without it, it prints a
 compact human-readable table (price, stock, title, url). Progress, warnings
 and notes go to stderr, never stdout.
 
-```
+```text
 <key>.py info
 <key>.py search "<query>" [--limit N] [--in-stock] [--json PATH]
 <key>.py categories [--grep REGEX] [--json PATH]
