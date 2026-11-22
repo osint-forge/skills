@@ -95,5 +95,7 @@ Review only. Do not edit, commit, push, comment or start subagents.
 Score this review out of 10 and list findings with file:line and a fix.
 ```
 
-If a delegate changes a tracked file anyway, `results.json` records
-`worktree_changed`. Stop, inspect the change, and do not discard the user's work.
+If a delegate changes the worktree anyway, the top-level `worktree_changed` field in
+`results.json` lists the files. Stop, inspect the change, and do not discard the
+user's work. The check covers tracked and untracked files by path; the read-only
+modes remain the primary guard.

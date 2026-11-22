@@ -12,7 +12,7 @@ and reports agreement, disagreement and scores.
 | Neon | `agy` | `gemini-4-neon-xhigh` |
 | DeepSeek v4.1 Flash | `opencode` | `opencode-go/deepseek-v4.1-flash` |
 
-The defaults are configurable in the script. If a CLI or model is unavailable, the
+The defaults are configurable with the flags below. If a CLI or model is unavailable, the
 council reports it; it does not substitute another model.
 
 ## Install
@@ -39,6 +39,8 @@ Or copy or symlink this directory into your agent's skills folder.
 - [OpenCode](https://opencode.ai) signed in and able to run
   `opencode-go/deepseek-v4.1-flash`.
 - A Git checkout and network access for the model providers.
+- The brief and patch are sent to each configured provider. Do not review changes
+  containing secrets or data you cannot share with those providers.
 
 ## Use
 
@@ -48,20 +50,28 @@ The skill runs a script that receives a review brief and a patch:
 uv run scripts/council.py \
   --brief <out>/brief.md \
   --diff <out>/diff.patch \
+  --cwd <checkout> \
+  --head <head-sha> \
   --out <out>/council
 ```
+
+For a pull request, `--cwd` must point at a checkout of the head and `--head` must
+be its SHA; the script exits when they differ. For a local diff, omit `--head`.
 
 `<out>` is any folder outside this skill. The result folder contains:
 
 - `prompt.md`: the common review prompt;
 - `<member>.md`: the reviewer's final answer;
 - `<member>.stdout` and `<member>.stderr`: raw process output;
-- `results.json`: status, timing, missing CLIs, timeouts and worktree changes.
+- `results.json`: the reviewed head, status, timing, missing CLIs, timeouts and
+  worktree changes.
 
 Useful flags:
 
 ```text
 --delegates codex,antigravity,opencode
+--cwd <checkout>
+--head <head-sha>
 --codex-model gpt-6.2-sol
 --antigravity-model gemini-4-neon-xhigh
 --opencode-model opencode-go/deepseek-v4.1-flash
@@ -79,8 +89,8 @@ mode each CLI offers:
 - OpenCode: `--agent plan`.
 
 The skill also tells the agent not to edit, commit, push or comment during a round,
-and checks for tracked-file changes afterwards. A changed worktree is reported, not
-reverted.
+and checks for changes to tracked and untracked files afterwards. A changed worktree
+is reported in the top-level `worktree_changed` field of `results.json`, not reverted.
 
 ## Tests
 
