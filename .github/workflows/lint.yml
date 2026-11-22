@@ -1,0 +1,49 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Ruff
+        run: uvx ruff@latest check --output-format=github .
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+
+      - name: Markdownlint
+        run: npx --yes markdownlint-cli2@latest "**/*.md"
+
+      - name: HTML Validate
+        run: npx --yes html-validate@latest "**/*.html"
+
+      - name: Actionlint
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color

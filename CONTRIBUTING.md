@@ -95,11 +95,11 @@ fixtures or fake clients under `tests/<name>/`.
 - **Python:** `uvx ruff@latest check .` uses [`ruff.toml`](ruff.toml). CI runs the latest
   Ruff release; the config targets Python 3.13 and currently checks pyflakes, syntax
   and bare-except errors. Add rules only with a plan to fix the existing findings.
-- **Markdown:** `npx --yes markdownlint-cli2@0.24.2 "**/*.md"` uses
+- **Markdown:** `npx --yes markdownlint-cli2@latest "**/*.md"` uses
   [`.markdownlint.json`](.markdownlint.json). Line length and inline HTML are
   allowed because the skill references deliberately use tables and XML tags.
-- **HTML:** `npx --yes html-validate@10.4.0 "**/*.html"`.
-- **Workflows:** `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12`
+- **HTML:** `npx --yes html-validate@latest "**/*.html"`.
+- **Workflows:** `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest`
   from the repository root, or rely on the CI lint job.
 
 ## Before opening a PR

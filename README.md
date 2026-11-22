@@ -71,9 +71,9 @@ Lint the repository:
 
 ```bash
 uvx ruff@latest check .
-npx --yes markdownlint-cli2@0.24.2 "**/*.md"
-npx --yes html-validate@10.4.0 "**/*.html"
-docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12
+npx --yes markdownlint-cli2@latest "**/*.md"
+npx --yes html-validate@latest "**/*.html"
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest
 ```
 
 CI runs the suite on Ubuntu and Windows with Python 3.13,

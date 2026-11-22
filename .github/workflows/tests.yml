@@ -14,40 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
-        with:
-          enable-cache: true
-
-      - name: Ruff
-        run: uvx ruff@latest check --output-format=github .
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: "lts/*"
-
-      - name: Markdownlint
-        run: npx --yes markdownlint-cli2@0.24.2 "**/*.md"
-
-      - name: HTML Validate
-        run: npx --yes html-validate@10.4.0 "**/*.html"
-
-      - name: Actionlint
-        uses: docker://rhysd/actionlint:1.7.12
-        with:
-          args: -color
-
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
