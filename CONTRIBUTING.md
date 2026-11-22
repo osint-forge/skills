@@ -92,9 +92,9 @@ fixtures or fake clients under `tests/<name>/`.
 
 ## Linting
 
-- **Python:** `uvx ruff@0.14.6 check .` uses [`ruff.toml`](ruff.toml). It targets
-  Python 3.13 and currently checks pyflakes, syntax and bare-except errors. Add rules
-  only with a plan to fix the existing findings.
+- **Python:** `uvx ruff@latest check .` uses [`ruff.toml`](ruff.toml). CI runs the latest
+  Ruff release; the config targets Python 3.13 and currently checks pyflakes, syntax
+  and bare-except errors. Add rules only with a plan to fix the existing findings.
 - **Markdown:** `npx --yes markdownlint-cli2@0.24.2 "**/*.md"` uses
   [`.markdownlint.json`](.markdownlint.json). Line length and inline HTML are
   allowed because the skill references deliberately use tables and XML tags.
@@ -105,7 +105,7 @@ fixtures or fake clients under `tests/<name>/`.
 ## Before opening a PR
 
 - `uv run tests/run_all.py` passes.
-- `uvx ruff@0.14.6 check .` and the Markdown and HTML linters pass.
+- `uvx ruff@latest check .` and the Markdown and HTML linters pass.
 - Actionlint passes if `.github/workflows/` changed.
 - The new skill appears in the root README.
 - `SKILL.md` and `README.md` agree on install, requirements and network hosts.

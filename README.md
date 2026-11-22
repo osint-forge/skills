@@ -70,7 +70,7 @@ uv run tests/run_all.py --filter mk-tech-shop-search
 Lint the repository:
 
 ```bash
-uvx ruff@0.14.6 check .
+uvx ruff@latest check .
 npx --yes markdownlint-cli2@0.24.2 "**/*.md"
 npx --yes html-validate@10.4.0 "**/*.html"
 docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12
