@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
 """Setec (setec.mk) store client.
@@ -263,13 +263,15 @@ def meili(path, body):
     url = SEARCH_BASE + path
     try:
         return _request("POST", url, auth=True, json=body)
-    except KeyRejected as e:
+    except KeyRejected as exc:
         if _rediscover_key():
             try:
                 return _request("POST", SEARCH_BASE + path, auth=True, json=body)
-            except KeyRejected as e2:
-                e = e2
-        raise StoreError(f"search key rejected and could not be re-discovered: {e}")
+            except KeyRejected as retry_exc:
+                raise StoreError(
+                    f"search key rejected and could not be re-discovered: {retry_exc}"
+                ) from retry_exc
+        raise StoreError(f"search key rejected and could not be re-discovered: {exc}")
 
 
 def search_body(body):

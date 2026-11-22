@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
 """Gjirafa50 (https://gjirafa50.mk) and ZirafaMall (https://zirafamall.mk) catalogue client.
@@ -1127,7 +1127,7 @@ class Gjirafa:
         if text:
             subs = self._subcategories(text)
             if subs:
-                self.log(f"subcategories (included in this listing): "
+                self.log("subcategories (included in this listing): "
                          + "; ".join(f"{n} [{s}]" for s, n in subs[:40]) + (" ..." if len(subs) > 40 else ""))
         params = {"categoryId": cid}
         if self.cfg["page_size"]:

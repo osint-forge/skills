@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
 """
@@ -24,7 +24,7 @@ Commands
               (EAN, then model codes / part numbers), offers sorted by price
 
 Run any command with -h for its flags. mkshop.py itself uses only the
-standard library; the store clients need Python 3.9+ with requests and
+standard library; the store clients need Python 3.13+ with requests and
 beautifulsoup4 (MKSHOP_PYTHON picks the interpreter that runs them).
 
 Store keys: setec anhoch neksio ddstore neptun hivetec gjirafa50 zirafamall
@@ -2468,6 +2468,14 @@ def overall_exit(statuses):
 # --------------------------------------------------------------------------
 # Command: stores
 # --------------------------------------------------------------------------
+def _client_path(path):
+    """A display path for a client, absolute when it lives on another drive (Windows)."""
+    try:
+        return os.path.relpath(path, HERE)
+    except ValueError:
+        return path
+
+
 def cmd_stores(ctx, a):
     keys = parse_stores(a.stores, a.exclude)
     infos = ctx.infos(keys)
@@ -2478,7 +2486,7 @@ def cmd_stores(ctx, a):
         caps = inf.get("capabilities") if isinstance(inf.get("capabilities"), list) else None
         rows.append({
             "store": k, "name": inf.get("name") or st["name"],
-            "client": os.path.relpath(ctx.script(k), HERE) + (" " + " ".join(st["args"]) if st["args"] else ""),
+            "client": _client_path(ctx.script(k)) + (" " + " ".join(st["args"]) if st["args"] else ""),
             "domains": st["domains"], "base_url": inf.get("base_url") or f"https://{st['domains'][0]}",
             "sells": inf.get("sells") or st["sells"],
             "capabilities": caps,

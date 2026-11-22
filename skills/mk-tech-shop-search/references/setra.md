@@ -7,6 +7,7 @@ Client: `scripts/stores/setra.py` (key `setra`). Verified live 2026-10-03, then 
 
 Setra (СЕТРА ДООЕЛ, Skopje; one shop) is an IT, gaming and small-electronics retailer with a small catalogue
 (under two thousand products). Top-level departments (a product sits in 1–6 categories, so they overlap):
+
 - **Peripherals:** Галантерија (mice, headphones, keyboards, combos, speakers, bags, mouse pads) and Гејминг (gaming
   keyboards, mice, PCs, headsets, coolers, monitors, cases, chairs).
 - **PC parts:** Комјутерски Компоненти (coolers, cases, PSUs, water cooling) and the brand category `be quiet!`.
@@ -24,6 +25,7 @@ Best for Logitech, be quiet!/NZXT/Arctic parts, Dell/AOC monitors, Lenovo laptop
 
 WordPress + WooCommerce (Porto theme) on a bare Apache origin (no CDN; Wordfence installed). All anonymous: no cookies,
 nonces or login.
+
 - **Products:** Store API `GET /wp-json/wc/store/v1/products` with `category=<ids>` (comma = OR; parents include
   children), `search=`, `include=<ids>`, `stock_status=instock`, `per_page` (max 100), `page`, `orderby=id&order=asc`,
   `_fields`; totals in `X-WP-Total`/`X-WP-TotalPages`. `/products/<id|slug>` (404 JSON if unknown), `/products/categories`

@@ -1,16 +1,20 @@
 # /// script
-# requires-python = ">=3.9"
+# requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
-"""Regression tests for mkshop.py against the fake store clients in tests/fake_stores and
-tests/fake_alt (offline). Run: python3 -B tests/test_mkshop.py"""
-import csv, io, json, os, subprocess, sys, time
+"""Regression tests for mkshop.py against the fake store clients in tests/mk-tech-shop-search/fake_stores and
+tests/mk-tech-shop-search/fake_alt (offline).
+Run: python3 -B tests/mk-tech-shop-search/test_mkshop.py"""
+import csv, glob, io, json, os, subprocess, sys, time
+
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8")
 
 B = os.path.dirname(os.path.abspath(__file__))
-import os as _pos
 # The skill under test: this checkout's copy, or MKSHOP_SKILL_DIR (e.g. an installed copy).
-SKILL = _pos.environ.get("MKSHOP_SKILL_DIR") or _pos.path.join(
-    _pos.path.dirname(_pos.path.dirname(_pos.path.abspath(__file__))), "skills", "mk-tech-shop-search")
+SKILL = os.environ.get("MKSHOP_SKILL_DIR") or os.path.join(
+    os.path.dirname(os.path.dirname(B)), "skills", "mk-tech-shop-search")
 M = SKILL + "/scripts/mkshop.py"
 FAKE = os.path.join(B, "fake_stores")
 import tempfile as _tempfile  # noqa: E402
@@ -23,7 +27,8 @@ def run(args, env=None, timeout=120):
     e = dict(os.environ, MKSHOP_STORES_DIR=FAKE)
     e.update(env or {})
     t0 = time.time()
-    p = subprocess.run([sys.executable, M] + args, capture_output=True, text=True, env=e, timeout=timeout)
+    p = subprocess.run([sys.executable, M] + args, capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", env=e, timeout=timeout)
     return p.returncode, p.stdout, p.stderr, time.time() - t0
 
 
@@ -62,10 +67,13 @@ check("union per store by id (no duplicates)", len(ids) == len(set(ids)))
 
 # --- per-store sequencing: no two client runs of one store overlap; stores overlap each other
 LOG = os.path.join(_OUT, "seq.log")
-if os.path.exists(LOG):
-    os.remove(LOG)
+for _p in glob.glob(LOG + ".*"):
+    os.remove(_p)
 rc, d, err, dt = js(["search", "mx master", "--q", "logitech", "--q", "galaxy", "--q", "samsung"], {"FAKE_LOG": LOG, "FAKE_SLOW": "setec:0.5,neptun:0.5"})
-rows = [l.rstrip("\n").split("\t") for l in open(LOG)]
+rows = []
+for _p in glob.glob(LOG + ".*"):
+    with open(_p, encoding="utf-8") as _f:
+        rows += [l.rstrip("\n").split("\t") for l in _f]
 by = {}
 for st_, pid, t0, t1, cmd, q in rows:
     by.setdefault(st_, []).append((float(t0), float(t1)))
@@ -347,11 +355,11 @@ check("JBL free text: table shows the sand sub-group", "  colour sand: 1 offer(s
 G50, ZM = os.path.join(TMP, "g50.json"), os.path.join(TMP, "zm.json")
 run(["list", "--store", "gjirafa50", "1001", "--json", G50, "--quiet"])
 run(["list", "--store", "zirafamall", "1001", "--json", ZM, "--quiet"])
-zm = json.load(open(ZM))
+zm = json.load(open(ZM, encoding="utf-8"))
 check("single list run: ZirafaMall mirror not detectable (no Gjirafa50 SKUs in it)", zm["results"]
       and not any(r.get("mirror_of") for r in zm["results"]))
 check("envelopes carry generated_at", isinstance(zm.get("generated_at"), str) and zm["generated_at"][:4].isdigit())
-g50skus = {r["sku"] for r in json.load(open(G50))["results"]}
+g50skus = {r["sku"] for r in json.load(open(G50, encoding="utf-8"))["results"]}
 rc, d, err, dt = js(["group", G50, ZM])
 offers = [o for p in d["results"] for o in p["offers"]]
 zmo = [o for o in offers if o["store"] == "zirafamall"]
@@ -672,7 +680,7 @@ check("group --json PATH prints the tables too", rc == 0 and "PRODUCTS:" in out 
 # stores: every client failing to import exits 1 and names the missing module once (2026-10-09)
 NOMOD = _tf.mkdtemp(prefix="mkshop-nomod-")
 for _s in ("setec", "anhoch", "neksio", "ddstore", "neptun", "hivetec", "gjirafa", "setra", "ananas", "tehnomarket"):
-    with open(os.path.join(NOMOD, _s + ".py"), "w") as _f:
+    with open(os.path.join(NOMOD, _s + ".py"), "w", encoding="utf-8") as _f:
         _f.write("import requests_not_installed_xyz\n")
 rc, out, err, dt = run(["stores"], {"MKSHOP_STORES_DIR": NOMOD})
 check("stores: no client can start -> exit 1 and one install hint naming the module",
@@ -684,7 +692,7 @@ _sh.rmtree(NOMOD, ignore_errors=True)
 SOME = os.path.join(_tf.mkdtemp(prefix="mkshop-somemod-"), "stores")
 _sh.copytree(FAKE, SOME, ignore=_sh.ignore_patterns("__pycache__"))
 for _s in ("anhoch", "neptun", "ddstore"):   # e.g. beautifulsoup4 missing: only the clients that use it fail
-    with open(os.path.join(SOME, _s + ".py"), "w") as _f:
+    with open(os.path.join(SOME, _s + ".py"), "w", encoding="utf-8") as _f:
         _f.write("import bs4_not_installed_xyz\n")
 rc, out, err, dt = run(["stores"], {"MKSHOP_STORES_DIR": SOME})
 check("stores: some clients missing a module -> exit 0, but the install hint names how many",

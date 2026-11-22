@@ -17,6 +17,7 @@ pickup.
 ## Access and endpoints
 
 All public JSON; no cookies or login.
+
 - **Catalogue (Meilisearch).** `POST https://search.sp.solslab.dev/indexes/products/search`
   with `Authorization: Bearer <SEARCH_KEY>` (`setec.py`), the public key from the site's JS.
   Body: `q`, `filter`, `facets`, `sort`, `limit`/`offset`, `attributesToRetrieve`.

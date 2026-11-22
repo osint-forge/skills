@@ -106,7 +106,7 @@ Ananas listings `mirror_of: neksio`). Count those offers once.
 - **No price validity window is exposed** (checked 2026-10-03 on every `#discount` card, product pages and `/js/shop.js`), so
   records carry no `price_valid_until`. A card has no date field except `futureDocumentDate`, which is the expected restock date.
 - **There is no online checkout** for anonymous buyers. The "Прашај/Нарачај" button opens an inquiry form (e-mail,
-  phone, comment), or the buyer orders by phone or at sales@neksio.mk. Registration is optional.
+  phone, comment), or the buyer orders by phone or at <sales@neksio.mk>. Registration is optional.
 - **No delivery fee is published** (Policies/PurchaseAndShipping), so `shipping_mkd` is not set. Ask the shop.
 
 ## Stock

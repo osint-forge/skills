@@ -1,7 +1,7 @@
 # Store client contract
 
 Every store has one self-contained client at `scripts/stores/<key>.py`
-(Python 3.9+ standard library plus `requests` and `bs4`; no imports between
+(Python 3.13+ standard library plus `requests` and `bs4`; no imports between
 store files). Each starts with the same PEP 723 header as `mkshop.py`
 (`# /// script` with the two dependencies), so `uv run` works on any of them
 and they all share one cached environment. `scripts/mkshop.py`
@@ -32,7 +32,7 @@ PATH and prints only the record count to stdout. Without it, it prints a
 compact human-readable table (price, stock, title, url). Progress, warnings
 and notes go to stderr, never stdout.
 
-```
+```text
 <key>.py info
 <key>.py search "<query>" [--limit N] [--in-stock] [--json PATH]
 <key>.py categories [--grep REGEX] [--json PATH]

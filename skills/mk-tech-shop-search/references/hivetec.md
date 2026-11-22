@@ -6,6 +6,7 @@ Client: `scripts/stores/hivetec.py` (key `hivetec`). Verified live 2026-10-03. C
 
 A gaming and PC specialist with a catalogue of a few thousand products. Titles are almost all English. Category
 terms:
+
 - **Peripherals:** keyboards (plus a gaming term), gaming mice and mice, gaming headsets and headphones, speakers,
   webcams, mouse pads/keyboard accessories, racing wheels, controllers.
 - **Monitors:** gaming monitors and monitors (two terms), monitor arms/accessories.
@@ -22,6 +23,7 @@ often the manufacturer part number).
 
 WordPress + WooCommerce (Woodmart) behind Cloudflare. All data comes from the anonymous **WooCommerce Store API**,
 with no HTML parsing, cookies or login.
+
 - `GET /wp-json/wc/store/v1/products` takes `category=<ids>` (a comma list means OR), `search=`, `sku=` (exact),
   `include=<ids>`, `stock_status=instock`, `per_page` (max 100), `page` and `_fields` (cuts a 100-product page to
   a third of the size, no slower). Counts are in `X-WP-Total` / `X-WP-TotalPages`. Each object has `prices` (minor
@@ -137,6 +139,7 @@ with no HTML parsing, cookies or login.
 ## Warranty
 
 `detail.warranty` is the "Гаранција:" line of the short description, and `extra.warranty_days` holds the integer.
+
 - **Common values** (2026-10-03), most frequent first: 360 дена, 720, 1050, 1080, 1800.
 - **"0 дена"** (desks, chairs, accessories) means not entered. `warranty` is then null, and the raw text is
   kept in `extra.warranty_raw`.
