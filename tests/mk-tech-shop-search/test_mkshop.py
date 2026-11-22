@@ -2,10 +2,9 @@
 # requires-python = ">=3.13"
 # dependencies = ["requests>=2.28", "beautifulsoup4>=4.11"]
 # ///
-"""Regression tests for mkshop.py against the fake store clients in tests/mk-tech-shop-search/fake_stores and
-tests/mk-tech-shop-search/fake_alt (offline).
+"""Regression tests for mkshop.py against the fake store clients in tests/mk-tech-shop-search/fake_stores (offline).
 Run: python3 -B tests/mk-tech-shop-search/test_mkshop.py"""
-import csv, glob, io, json, os, subprocess, sys, time
+import csv, glob, io, json, os, shutil, subprocess, sys, time
 
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
@@ -19,7 +18,6 @@ M = SKILL + "/scripts/mkshop.py"
 FAKE = os.path.join(B, "fake_stores")
 import tempfile as _tempfile  # noqa: E402
 _OUT = _tempfile.mkdtemp(prefix="mkshop-test-")   # big outputs and logs, never inside the repo
-ALT = os.path.join(B, "fake_alt")
 fails = 0
 
 
@@ -115,7 +113,13 @@ check("unknown store -> exit 2", rc == 2, rc)
 rc, out, err, dt = run(["categories"])
 check("categories without --grep/--store -> exit 2", rc == 2, rc)
 
-# --- missing client and --site fallback
+# --- missing client and --site fallback, using a tiny copy of the fake stores
+ALT = os.path.join(_OUT, "alt_stores")
+os.makedirs(os.path.join(ALT, "data"), exist_ok=True)
+for _name in ("_fakecore.py", "setec.py", "gjirafa.py"):
+    shutil.copy2(os.path.join(FAKE, _name), ALT)
+for _name in ("setec.json", "gjirafa50.json", "zirafamall.json"):
+    shutil.copy2(os.path.join(FAKE, "data", _name), os.path.join(ALT, "data", _name))
 rc, d, err, dt = js(["search", "galaxy a56", "--stores-dir", ALT, "--stores", "setec,gjirafa,tehnomarket"])
 check("missing client reported as error", d["stores"]["tehnomarket"]["status"] == "error" and "not found" in d["stores"]["tehnomarket"]["message"])
 check("--site after-subcommand fallback", d["stores"]["gjirafa50"]["status"] == "ok" and d["stores"]["zirafamall"]["status"] == "ok")
