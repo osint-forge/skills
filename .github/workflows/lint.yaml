@@ -1,4 +1,4 @@
-name: lint
+name: Linters
 
 on:
   push:
