@@ -78,6 +78,9 @@ compatibility: Python 3.13+ with requests; outbound HTTPS to api.example.mk
 Tests are offline and deterministic. Do not call a live service from CI; use recorded
 fixtures or fake clients under `tests/<name>/`.
 
+- Per-skill tests live in `tests/<name>/`, named after the skill. They stay outside
+  `skills/` so `npx skills add` installs only the skill's runtime files.
+- Do not put a `SKILL.md` under `tests/`; `npx skills` discovers skills by that file.
 - Name test files `test_*.py`; the runner finds every test below `tests/`.
 - Keep each suite standalone: it should run with `python -B tests/<name>/test_*.py`
   from the repository root.
@@ -105,6 +108,7 @@ fixtures or fake clients under `tests/<name>/`.
 ## Before opening a PR
 
 - `uv run tests/run_all.py` passes.
+- `npx --yes skills@latest add . --list --yes` lists each skill and no test directory.
 - `uvx ruff@latest check .` and the Markdown and HTML linters pass.
 - Actionlint passes if `.github/workflows/` changed.
 - The new skill appears in the root README.

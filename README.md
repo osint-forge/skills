@@ -50,6 +50,7 @@ skills/<name>/assets/           optional templates and fixtures
 tests/test_skill_meta.py        repo-wide checks for every skill
 tests/run_all.py                discovers and runs every suite
 tests/<name>/                   offline tests owned by one skill
+tests/README.md                 test layout and how to run one skill
 ```
 
 ## Development

@@ -103,6 +103,19 @@ def main():
                         rel,
                     )
 
+    tests_dir = os.path.join(ROOT, "tests")
+    test_skills = sorted(
+        d
+        for d in os.listdir(tests_dir)
+        if os.path.isdir(os.path.join(tests_dir, d)) and d != "__pycache__"
+    )
+    for name in test_skills:
+        check(f"tests/{name} has a matching skill", name in names, name)
+    check(
+        "tests/ contains no SKILL.md",
+        not glob.glob(os.path.join(tests_dir, "**", "SKILL.md"), recursive=True),
+    )
+
     # Hidden text: instructions, code and tests, but not fixture data.
     srcs = []
     for root, _, files in os.walk(SKILLS):

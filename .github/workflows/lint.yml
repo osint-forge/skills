@@ -37,6 +37,9 @@ jobs:
         with:
           node-version: "lts/*"
 
+      - name: Validate skill packages
+        run: npx --yes skills@latest add . --list --yes
+
       - name: Markdownlint
         run: npx --yes markdownlint-cli2@latest "**/*.md"
 
