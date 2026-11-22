@@ -92,6 +92,7 @@ The tests run offline against fake shop clients. From the repository root:
 
 ```bash
 uv run tests/mk-tech-shop-search/test_docs.py         # docs match the code
+uv run tests/mk-tech-shop-search/test_clients.py      # real client parsers and price windows
 uv run tests/mk-tech-shop-search/test_mkshop.py       # mkshop.py end to end against fake clients
 uv run tests/test_skill_meta.py                       # repo-wide skill checks: frontmatter, links, hidden text
 ```
