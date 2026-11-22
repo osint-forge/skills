@@ -10,9 +10,10 @@ format, so it works in any agent that supports skills.
 | Skill | What it does |
 |---|---|
 | [`mk-tech-shop-search`](skills/mk-tech-shop-search/) | Search, compare and price-check products across 11 Macedonian online shops: Setec, Neptun, Tehnomarket, Anhoch, Neksio, DDStore, Hivetec, Gjirafa50, ZirafaMall, Setra and the Ananas marketplace. |
+| [`council-review`](skills/council-review/) | Run a read-only multi-model review through Codex, Antigravity and OpenCode, then verify findings, disagreements and scores. |
 
-More developer-tooling skills are planned. The repository layout and test tooling are
-ready for them; see [CONTRIBUTING.md](CONTRIBUTING.md).
+The repository layout and test tooling support more skills; see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Install
 
