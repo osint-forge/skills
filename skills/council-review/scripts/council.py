@@ -102,8 +102,6 @@ def command_for(
             prompt,
             "--model",
             model,
-            "--mode",
-            "plan",
             "--sandbox",
             "--output-format",
             "text",

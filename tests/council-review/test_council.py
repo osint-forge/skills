@@ -67,8 +67,8 @@ antigravity = council.command_for(
 )
 check("antigravity uses Neon xhigh", "gemini-4-neon-xhigh" in antigravity)
 check(
-    "antigravity uses plan and sandbox",
-    "--mode" in antigravity and "plan" in antigravity and "--sandbox" in antigravity,
+    "antigravity uses sandbox without interactive plan mode",
+    "--sandbox" in antigravity and "--mode" not in antigravity,
 )
 check("antigravity prompt follows -p", antigravity[1] == "-p" and antigravity[2] == "PROMPT")
 

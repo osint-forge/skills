@@ -82,10 +82,11 @@ Useful flags:
 ## Read-only behavior
 
 The script asks every delegate to review only and configures the closest read-only
-mode each CLI offers:
+or sandboxed mode each CLI offers:
 
 - Codex: `--sandbox read-only`;
-- Antigravity: `--mode plan --sandbox`;
+- Antigravity: `--sandbox` (default print mode; its plan mode waits for approval and
+  cannot run non-interactively);
 - OpenCode: `--agent plan`.
 
 The skill also tells the agent not to edit, commit, push or comment during a round,

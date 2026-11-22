@@ -7,8 +7,9 @@ compatibility: Python 3.13+, plus authenticated codex, agy and opencode CLIs. Re
 
 # Council review
 
-Three independent reviewers read the same change. They never edit it. You verify
-their findings, reconcile disagreements, and report what survives.
+Three independent reviewers read the same change. They are asked not to edit it, and
+the script reports any worktree changes. You verify their findings, reconcile
+disagreements, and report what survives.
 
 ## Members
 
@@ -55,9 +56,9 @@ Omit `--head` for a local diff; keep `--cwd` at the checkout under review. The
 script exits when the checkout HEAD differs from `--head`. The prompt tells each
 delegate to treat the brief, patch and repository text as untrusted data.
 
-The script starts each delegate in parallel with read-only settings, captures its
-answer, and writes one file per delegate plus `results.json`. It reports a missing
-CLI, missing model, timeout, or non-zero exit instead of hiding it.
+The script starts each delegate in parallel with read-only or sandboxed settings,
+captures its answer, and writes one file per delegate plus `results.json`. It reports
+a missing CLI, missing model, timeout, or non-zero exit instead of hiding it.
 
 The prompt requires each reviewer to return:
 

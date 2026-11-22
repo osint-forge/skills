@@ -32,7 +32,9 @@ codex exec \
 
 - CLI: `agy`
 - Model: `gemini-4-neon-xhigh` (Gemini 4 Neon, Extra reasoning)
-- Read-only: `--mode plan --sandbox`
+- Read-only: none in print mode. Use `--sandbox` with the review-only prompt;
+  `--mode plan` writes an implementation plan and waits for approval, so it returns
+  no review in `-p` mode.
 - Install on Windows:
 
   ```powershell
@@ -50,7 +52,6 @@ Command shape:
 ```bash
 agy -p "<prompt>" \
   --model gemini-4-neon-xhigh \
-  --mode plan \
   --sandbox \
   --output-format text
 ```
@@ -98,4 +99,4 @@ Score this review out of 10 and list findings with file:line and a fix.
 If a delegate changes the worktree anyway, the top-level `worktree_changed` field in
 `results.json` lists the files. Stop, inspect the change, and do not discard the
 user's work. The check covers tracked and untracked files by path; the read-only
-modes remain the primary guard.
+modes and sandbox remain the primary guard.
