@@ -432,7 +432,14 @@ args = []
     code, _, stderr = run_main("cleanup", "--out", str(repo), "--all")
     check("cleanup refuses a folder without a session", code == 1 and repo.is_dir(), stderr)
 
+    # An edited session.json must not redirect the removal to another worktree.
+    victim = root / "victim"
+    git(repo, "worktree", "add", "--detach", "-q", str(victim))
+    tampered = json.loads((out / "session.json").read_text(encoding="utf-8"))
+    tampered.update(checkout=str(victim), repo=str(root))
+    (out / "session.json").write_text(json.dumps(tampered), encoding="utf-8")
     code, _, _ = run_main("cleanup", "--out", str(out))
+    check("cleanup ignores a tampered checkout path", victim.is_dir() and (victim / "app.py").is_file())
     check("cleanup removes the worktree", code == 0 and not checkout.exists())
     worktrees = subprocess.run(["git", "worktree", "list"], cwd=repo, capture_output=True, text=True).stdout
     check("cleanup prunes the worktree entry", str(checkout.name) not in worktrees, worktrees)

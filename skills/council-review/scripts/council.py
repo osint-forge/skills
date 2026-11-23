@@ -34,6 +34,12 @@ from pathlib import Path
 SKILL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = SKILL_DIR / "references" / "members.toml"
 INPUTS_DIRNAME = ".council-inputs"
+WORKTREE_DIRNAME = "checkout"
+SESSION_FILE = "session.json"
+RESULTS_FILE = "results.json"
+DIFF_FILE = "diff.patch"
+CONTEXT_FILE = "context.md"
+BRIEF_FILE = "brief.md"
 TODO_MARK = "TODO(agent):"
 PLACEHOLDERS = ("model", "effort", "launcher", "prompt_file", "inputs", "cwd", "final")
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
@@ -327,9 +333,12 @@ SCORE_RE = re.compile(
     re.I | re.M,
 )
 NONE_RE = re.compile(rf"^{_DECOR}FINDINGS{_DECOR}:{_DECOR}(?:none|no findings)\b", re.I | re.M)
-FINDING_RE = re.compile(r"^\s*(?:[-*]|\d+[.)])\s*[*_`]*\[(blocker|should|nit)\][*_`]*\s*(.+)$", re.I | re.M)
+# Whitespace is [ \t] and the body starts with \S, so no two parts can match the same text.
+FINDING_RE = re.compile(
+    r"^[ \t]*(?:[-*]|\d+[.)])[ \t]*[*_`]*\[(blocker|should|nit)\][*_`]*[ \t]*(\S.*)$", re.I | re.M
+)
 LOCATION_RE = re.compile(r"^`?(?P<file>[^\s`]+?):(?P<line>\d+)(?:[-–]\d+)?`?\s*(?:[-–—:]\s*)?")
-FIX_RE = re.compile(r"\s*\bFix:\s*", re.I)
+FIX_RE = re.compile(r"\bFix:", re.I)
 
 
 def parse_review(text: str) -> dict:
@@ -550,7 +559,7 @@ def run_member(
 
 
 def load_session(out: Path) -> dict:
-    path = out / "session.json"
+    path = out / SESSION_FILE
     if not path.is_file():
         raise CouncilError(f"{path} not found; run 'council.py prepare' first")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -564,10 +573,19 @@ def safe_label(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-") or "change"
 
 
-def remove_worktree(repo: Path, checkout: Path) -> None:
-    if checkout.exists():
-        git(repo, "worktree", "remove", "--force", str(checkout))
-    git(repo, "worktree", "prune")
+def remove_worktree(out: Path) -> Path:
+    """Remove the throwaway worktree at <out>/checkout, the only place prepare creates one.
+
+    The path is never read from session.json, and the owning repository is found from the
+    worktree itself, so an edited session file cannot point the removal elsewhere.
+    """
+    checkout = out / WORKTREE_DIRNAME
+    if not (checkout / ".git").is_file():  # a linked worktree has a .git file, not a folder
+        return checkout
+    common = Path(git_text(checkout, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+    git(out, f"--git-dir={common}", "worktree", "remove", "--force", str(checkout))
+    git(out, f"--git-dir={common}", "worktree", "prune")
+    return checkout
 
 
 def untracked_files(repo: Path, skip: list[str]) -> list[str]:
@@ -650,18 +668,16 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     default_out = Path(tempfile.gettempdir()) / "council-review" / f"{repo.name}-{repo_id}-{safe_label(label)}"
     out = (args.out or default_out).resolve()
     check_out_folder(out, repo)
-    previous = out / "session.json"
+    previous = out / SESSION_FILE
     if out.is_dir() and any(out.iterdir()) and not previous.is_file():
         raise CouncilError(f"--out {out} is a non-empty folder without a council session; use a new folder")
     out.mkdir(parents=True, exist_ok=True)
-    checkout = out / "checkout"
+    checkout = out / WORKTREE_DIRNAME
 
     def reset_previous() -> None:
         """Drop the previous round's worktree, only once the new inputs are known to be good."""
         if previous.is_file():
-            old = json.loads(previous.read_text(encoding="utf-8"))
-            if old.get("worktree"):
-                remove_worktree(Path(old.get("repo", repo)), Path(old["checkout"]))
+            remove_worktree(out)
 
     out_rel = relative_inside(out, repo)
     skip = [out_rel] if out_rel else []
@@ -729,7 +745,7 @@ def cmd_prepare(args: argparse.Namespace) -> int:
                 try:
                     git(checkout, "apply", "--binary", "--whitespace=nowarn", str(patch_file))
                 except CouncilError as error:
-                    remove_worktree(repo, checkout)
+                    remove_worktree(out)
                     raise CouncilError(f"{error}\nRe-run with --in-place to review the checkout directly.") from error
 
     # A fresh, randomly named folder: the reviewed code cannot pre-plant a file or link there.
@@ -737,16 +753,16 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     inputs.mkdir()
     session.update(checkout=str(checkout), inputs=str(inputs), files=files)
 
-    (out / "diff.patch").write_bytes(review_patch)
-    write_text(out / "context.md", render_context(session))
-    if not (out / "brief.md").exists():
-        write_text(out / "brief.md", BRIEF_TEMPLATE)
+    (out / DIFF_FILE).write_bytes(review_patch)
+    write_text(out / CONTEXT_FILE, render_context(session))
+    if not (out / BRIEF_FILE).exists():
+        write_text(out / BRIEF_FILE, BRIEF_TEMPLATE)
     if not (out / "ledger.md").exists():
         write_text(out / "ledger.md", LEDGER_TEMPLATE)
     session["fingerprint"] = fingerprint(snapshot(checkout, snapshot_ignore(session)))
     if session["fingerprint"] is None:
         raise CouncilError(f"cannot read git status in {checkout}; the change check would be blind")
-    save_json(out / "session.json", session)
+    save_json(out / SESSION_FILE, session)
 
     say(f"prepared {label} at {head[:12]}")
     say(f"  output:   {out}")
@@ -841,12 +857,12 @@ def stage_inputs(out: Path, inputs: Path, checkout: Path, blind: bool) -> None:
         raise CouncilError(f"{inputs} is missing or not a plain folder; re-run prepare")
     if relative_inside(inputs, checkout) is None and relative_inside(inputs, out) is None:
         raise CouncilError(f"{inputs} resolves outside the session; re-run prepare")
-    for name in ("context.md", "diff.patch") + (() if blind else ("brief.md",)):
+    for name in (CONTEXT_FILE, DIFF_FILE) + (() if blind else (BRIEF_FILE,)):
         if not (out / name).is_file():
             raise CouncilError(f"{out / name} is missing; re-run prepare")
-    for name in ("context.md", "diff.patch", "brief.md"):
+    for name in (CONTEXT_FILE, DIFF_FILE, BRIEF_FILE):
         (inputs / name).unlink(missing_ok=True)  # never write through a planted link
-        if name != "brief.md" or not blind:
+        if name != BRIEF_FILE or not blind:
             shutil.copyfile(out / name, inputs / name)
 
 
@@ -859,7 +875,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
 
     if not args.blind and not args.dry_run and not args.allow_incomplete_brief:
-        if TODO_MARK in read_text(out / "brief.md"):
+        if TODO_MARK in read_text(out / BRIEF_FILE):
             raise CouncilError(f"{out / 'brief.md'} still has {TODO_MARK} markers; fill it first")
     head = git_head(checkout)
     if head is None or head.lower() != session["head"].lower():
@@ -919,19 +935,19 @@ def cmd_run(args: argparse.Namespace) -> int:
     except BaseException:
         # Ctrl-C or a crash: kill running members instead of waiting for their timeouts.
         pool.shutdown(wait=False, cancel_futures=True)
-        for proc in list(_running):
+        for proc in _running.copy():
             kill_tree(proc)
         raise
     pool.shutdown()
     ordered = [results[key] for key in members]
 
     if args.dry_run:
-        save_json(round_dir / "results.json", {"dry_run": True, "excluded": excluded, "results": ordered})
+        save_json(round_dir / RESULTS_FILE, {"dry_run": True, "excluded": excluded, "results": ordered})
         return EXIT_OK if any(r["status"] == "planned" for r in ordered) else EXIT_NO_REVIEWS
 
     changed = changed_paths(before, snapshot(checkout, ignore))
     # Re-running some members in an existing round (--round N) keeps the other members' results.
-    previous_path = round_dir / "results.json"
+    previous_path = round_dir / RESULTS_FILE
     if previous_path.is_file():
         try:
             earlier = json.loads(previous_path.read_text(encoding="utf-8")).get("results", [])
@@ -949,7 +965,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         "results": ordered,
         "worktree_changed": changed,
     }
-    save_json(round_dir / "results.json", payload)
+    save_json(round_dir / RESULTS_FILE, payload)
     scores = write_scores(out)
 
     if changed:
@@ -965,8 +981,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
     out = args.out.resolve()
     session = load_session(out)
     if session.get("worktree"):
-        remove_worktree(Path(session["repo"]), Path(session["checkout"]))
-        say(f"removed worktree {session['checkout']}")
+        say(f"removed worktree {remove_worktree(out)}")
     if args.all:
         check_out_folder(out, Path(session["repo"]))
         shutil.rmtree(out)
