@@ -1,0 +1,101 @@
+# Council members. One table per member under [members.<key>].
+#
+#   label     display name
+#   provider  model vendor; --exclude-provider drops every member with this value
+#   command   executable name (resolved on PATH) or an absolute path
+#   model     default model ID; override with --member <key>=<model>
+#   default   true when the member runs without --members
+#   prompt    "stdin": the full prompt is piped to stdin
+#             "launcher": {launcher} is a one-line instruction to read {prompt_file}
+#   output    "stdout": the answer is stdout; "file": the CLI writes {final}
+#   args      argument template; placeholders are {model}, {effort}, {launcher},
+#             {prompt_file}, {inputs}, {cwd} and {final}
+#   effort    maps every --effort level (low, medium, high, xhigh, max) to the text
+#             that replaces {effort}. A CLI without a level maps it to the nearest one
+#             it has, written out here so the choice is visible.
+#
+# Read-only mode is per CLI. The script also runs every member in a throwaway
+# worktree and reports any file it changes, so a write never reaches your checkout.
+
+[members.claude]
+label = "Claude Opus (Claude Code)"
+provider = "anthropic"
+command = "claude"
+model = "opus"
+default = true
+prompt = "stdin"
+output = "stdout"
+# Only read-only tools exist in the session; dontAsk denies anything else.
+# --setting-sources user skips the reviewed repo's .claude settings and hooks.
+args = [
+  "-p",
+  "--setting-sources", "user",
+  "--model", "{model}",
+  "--effort", "{effort}",
+  "--tools", "Read,Grep,Glob",
+  "--permission-mode", "dontAsk",
+  "--add-dir", "{inputs}",
+]
+effort = { low = "low", medium = "medium", high = "high", xhigh = "xhigh", max = "max" }
+
+[members.codex]
+label = "Sol 6.2 (Codex)"
+provider = "openai"
+command = "codex"
+model = "gpt-6.2-sol"
+default = true
+prompt = "stdin"
+output = "file"
+args = [
+  "exec",
+  "--model", "{model}",
+  "-c", "model_reasoning_effort={effort}",
+  "--sandbox", "read-only",
+  "--ephemeral",
+  "--color", "never",
+  "--output-last-message", "{final}",
+  "--cd", "{cwd}",
+  "-",
+]
+effort = { low = "low", medium = "medium", high = "high", xhigh = "xhigh", max = "max" }
+
+[members.antigravity]
+label = "Neon (Antigravity)"
+provider = "google"
+command = "agy"
+# Antigravity encodes the reasoning level in the model ID (gemini-4-neon-high), so the
+# model here has no suffix. Its IDs stop at xhigh, so max uses xhigh.
+model = "gemini-4-neon"
+default = true
+# agy -p takes the prompt as its value and does not read stdin.
+prompt = "launcher"
+output = "stdout"
+# No read-only mode in print mode: --mode plan waits for approval.
+args = [
+  "--model", "{model}{effort}",
+  "--sandbox",
+  "--disable-slash-commands",
+  "--output-format", "text",
+  "--add-dir", "{inputs}",
+  "-p={launcher}",
+]
+effort = { low = "-low", medium = "-medium", high = "-high", xhigh = "-xhigh", max = "-xhigh" }
+
+[members.opencode]
+label = "DeepSeek v4.1 Flash (OpenCode)"
+provider = "deepseek"
+command = "opencode"
+model = "opencode-go/deepseek-v4.1-flash"
+default = true
+prompt = "launcher"
+output = "stdout"
+# The plan agent denies edits. OpenCode selects reasoning with a #variant; DeepSeek v4.1
+# Flash has low, high and max, so medium uses low and xhigh uses max.
+args = [
+  "run",
+  "--model", "{model}{effort}",
+  "--agent", "plan",
+  "--format", "default",
+  "{launcher}",
+]
+effort = { low = "#low", medium = "#low", high = "#high", xhigh = "#max", max = "#max" }

@@ -1,19 +1,23 @@
 # council-review
 
-A read-only, multi-model review of a pull request or local diff. The skill asks
-Codex, Antigravity and OpenCode for independent reviews, then verifies the findings
-and reports agreement, disagreement and scores.
+A read-only, multi-model review of a pull request or local change. Independent agent
+CLIs from different model providers review the same change in a throwaway worktree;
+your agent verifies their findings and reports agreement, disagreement and scores.
+It works from any agent harness that can run a shell command.
 
 ## Members
 
-| Member | CLI | Default model |
-|---|---|---|
-| Sol 6.2 | `codex` | `gpt-6.2-sol` |
-| Neon | `agy` | `gemini-4-neon-xhigh` |
-| DeepSeek v4.1 Flash | `opencode` | `opencode-go/deepseek-v4.1-flash` |
+| Key | Member | CLI | Default model | Provider |
+|---|---|---|---|---|
+| `claude` | Claude Opus | `claude` | `opus` | anthropic |
+| `codex` | Sol 6.2 | `codex` | `gpt-6.2-sol` | openai |
+| `antigravity` | Gemini 4 Neon | `agy` | `gemini-4-neon` (+ `-<effort>`) | google |
+| `opencode` | DeepSeek v4.1 Flash | `opencode` | `opencode-go/deepseek-v4.1-flash` | deepseek |
 
-The defaults are configurable with the flags below. If a CLI or model is unavailable, the
-council reports it; it does not substitute another model.
+Every member runs at the same reasoning effort, `high` by default (`--effort`). The
+agent excludes its own provider, so a Claude Code host runs the other three.
+Members are defined in [`references/members.toml`](references/members.toml); add one
+there or pass `--config <file>`. A missing CLI or model is reported, never substituted.
 
 ## Install
 
@@ -25,81 +29,89 @@ Or copy or symlink this directory into your agent's skills folder.
 
 ## Requirements
 
-- Python 3.13+.
-- [Codex CLI](https://github.com/openai/codex) signed in and able to run the
-  `gpt-6.2-sol` model.
-- [Antigravity CLI](https://antigravity.google/docs/getting-started/) as `agy`,
-  signed in and able to run `gemini-4-neon-xhigh`. On Windows the official
-  installer is:
-
-  ```powershell
-  irm https://antigravity.google/cli/install.ps1 | iex
-  ```
-
-- [OpenCode](https://opencode.ai) signed in and able to run
-  `opencode-go/deepseek-v4.1-flash`.
-- A Git checkout and network access for the model providers.
-- The brief and patch are sent to each configured provider. Do not review changes
-  containing secrets or data you cannot share with those providers.
+- Python 3.13+ and git. `gh` for `--pr`.
+- At least one member CLI, signed in. Install and auth notes are in
+  [`references/cli-models.md`](references/cli-models.md).
+- The context, brief and patch are sent to each member's provider. Do not review
+  changes containing secrets or data you cannot share with them.
 
 ## Use
 
-The skill runs a script that receives a review brief and a patch:
-
 ```bash
-uv run scripts/council.py \
-  --brief <out>/brief.md \
-  --diff <out>/diff.patch \
-  --cwd <checkout> \
-  --head <head-sha> \
-  --out <out>/council
+# 1. Scope the change: a PR, or the local branch plus uncommitted work.
+python3 scripts/council.py prepare --pr 123
+python3 scripts/council.py prepare --base origin/main
+
+# 2. Fill <out>/brief.md, then run a round.
+python3 scripts/council.py run --out <out> --exclude-provider anthropic
+
+# 3. After fixes, prepare again with the same --out and run the next round.
+# 4. Remove the worktree (and with --all, the output folder).
+python3 scripts/council.py cleanup --out <out>
 ```
 
-For a pull request, `--cwd` must point at a checkout of the head and `--head` must
-be its SHA; the script exits when they differ. For a local diff, omit `--head`.
-
-`<out>` is any folder outside this skill. The result folder contains:
-
-- `prompt.md`: the common review prompt;
-- `<member>.md`: the reviewer's final answer;
-- `<member>.stdout` and `<member>.stderr`: raw process output;
-- `results.json`: the reviewed head, status, timing, missing CLIs, timeouts and
-  worktree changes.
-
-Useful flags:
+`prepare` flags:
 
 ```text
---delegates codex,antigravity,opencode
---cwd <checkout>
---head <head-sha>
---codex-model gpt-6.2-sol
---antigravity-model gemini-4-neon-xhigh
---opencode-model opencode-go/deepseek-v4.1-flash
---timeout 900
---dry-run
+--pr 123                      a GitHub PR (needs gh); fetches pull/123/head if missing
+--base origin/main            local mode base (default HEAD: uncommitted work only)
+--repo <path>                 repository (default: current directory)
+--out <folder>                output folder (never the repository itself)
+--remote origin               remote to fetch the PR head from
+--in-place                    review the checkout itself instead of a worktree
 ```
+
+`run` flags:
+
+```text
+--members claude,codex        subset of members (default: every default member)
+--member codex=gpt-6.2-sol    override a member's model (repeatable)
+--effort high                 low, medium, high, xhigh or max for every member
+--exclude-provider anthropic  skip a provider or member key (repeatable)
+--config members.toml         alternative members file
+--timeout 900                 seconds per member
+--blind                       hide the author's brief from reviewers
+--round N                     re-run a specific round
+--allow-incomplete-brief      run with TODO(agent) markers left in the brief
+--dry-run                     print each member's command; no round, no scores
+```
+
+Exit codes: 0 at least one usable review, 1 usage error, 2 no usable review,
+3 a member changed the reviewed checkout.
+
+## Output
+
+`<out>` defaults to `<temp>/council-review/<repo>-<pr-N|local-branch>`:
+
+- `session.json`, `context.md`, `diff.patch`, `brief.md`, `ledger.md`;
+- `checkout/`: the throwaway worktree, with the inputs copied to a fresh
+  `checkout/.council-inputs-<random>/` folder;
+- `round-N/`: per member `prompt-<key>.md`, `<key>.md` (answer), `<key>.stdout`,
+  `<key>.stderr`, plus `results.json` with status, verdict, score and parsed findings;
+- `scores.md`: the score table across rounds;
+- `council-report.md`: written by the agent.
 
 ## Read-only behavior
 
-The script asks every delegate to review only and configures the closest read-only
-or sandboxed mode each CLI offers:
+Each member runs with its CLI's read-only settings: Claude with read-only tools,
+Codex with `--sandbox read-only`, OpenCode with `--agent plan`. Antigravity has no
+read-only print mode and runs with `--sandbox`. Every member reviews a throwaway
+worktree, not your checkout. The script hashes HEAD plus every dirty and untracked file
+before and after the round and reports any change; it does not see writes to ignored
+files. `run` refuses to start when the checkout changed since `prepare`. On timeout,
+the whole process tree is killed.
 
-- Codex: `--sandbox read-only`;
-- Antigravity: `--sandbox` (default print mode; its plan mode waits for approval and
-  cannot run non-interactively);
-- OpenCode: `--agent plan`.
-
-The skill also tells the agent not to edit, commit, push or comment during a round,
-and checks for changes to tracked and untracked files afterwards. A changed worktree
-is reported in the top-level `worktree_changed` field of `results.json`, not reverted.
+Read-only modes limit what a model does, not what the CLI loads. A CLI may load
+project configuration or plugins from the reviewed checkout before the model runs; the
+Claude member skips project settings with `--setting-sources user`, and the others are
+described in [`references/cli-models.md`](references/cli-models.md). Review PRs from
+untrusted authors only with members you have checked, or on an isolated machine.
 
 ## Tests
-
-The offline tests for this skill live in `tests/council-review/` and use the
-repository runner:
 
 ```bash
 uv run tests/run_all.py --filter council-review
 ```
 
-They do not call the model providers.
+The tests use fake member CLIs and temporary git repositories; they do not call any
+model provider.
