@@ -233,6 +233,12 @@ check(
     council.render_args(["{cwd}", "{inputs}"], {"cwd": "{inputs}", "inputs": "IN"}) == ["{inputs}", "IN"],
 )
 check("failed snapshot counts as a change", council.changed_paths({"HEAD": "x"}, None) == [council.SNAPSHOT_FAILED])
+spill = council.parse_review("VERDICT: CHANGES\nSCORE:\n1) [should] a.py:1 - Bug. Fix: fix\n")
+check("parse: an empty SCORE line does not read the next line", spill["score"] is None and len(spill["findings"]) == 1, spill)
+check("parse: score with a trailing period", council.parse_review("VERDICT: CHANGES\nSCORE: 8/10.")["score"] == 8)
+check("parse: decimal score is still one number", council.parse_review("VERDICT: CHANGES\nSCORE: 8.5/10")["score"] == 8.5)
+comment = council.BRIEF_TEMPLATE.split("-->")[0]
+check("brief comment has no placeholder marker", "TODO(agent)" not in comment)
 code, _, _ = run_main("run", "--bogus")
 check("usage errors exit 1, not 2", code == 1, code)
 
@@ -273,6 +279,12 @@ with tempfile.TemporaryDirectory() as tmp:
     check("inputs folder is fresh and random", inputs.parent == checkout and inputs.name.startswith(".council-inputs-"))
     code, _, stderr = run_main("prepare", "--repo", str(repo), "--out", str(repo))
     check("prepare refuses --out at the repository root", code == 1 and "repository" in stderr, stderr)
+    unrelated = root / "unrelated"
+    unrelated.mkdir()
+    (unrelated / "keep.txt").write_text("mine", encoding="utf-8")
+    code, _, stderr = run_main("prepare", "--repo", str(repo), "--out", str(unrelated))
+    check("prepare refuses a non-empty folder without a session", code == 1 and "non-empty" in stderr, stderr)
+    check("the unrelated folder is untouched", [p.name for p in unrelated.iterdir()] == ["keep.txt"])
     code, _, stderr = run_main("run", "--out", str(out), "--members", "codex")
     check("run refuses an unfilled brief", code == 1 and "TODO(agent)" in stderr, stderr)
     code, stdout, stderr = run_main("run", "--out", str(out), "--dry-run")
@@ -396,6 +408,26 @@ args = []
     scores = (out / "scores.md").read_text(encoding="utf-8")
     check("scores span rounds", "Round 1 | Round 2" in scores and "| Hang (m) | timeout | - |" in scores, scores)
     check("model override gets its own row", "| Good (m2) | - | 7/10 CHANGES |" in scores, scores)
+
+    # Re-running one member in round 1 must keep the others' round-1 results.
+    code, _, stderr = run_main(
+        "run", "--out", str(out), "--config", str(config), "--members", "garbage", "--round", "1", "--blind"
+    )
+    round1 = json.loads((out / "round-1" / "results.json").read_text(encoding="utf-8"))
+    keys = sorted(r["key"] for r in round1["results"])
+    check("--round re-run keeps the other members", keys == ["garbage", "ghost", "good", "hang", "writer"], keys)
+    scores = (out / "scores.md").read_text(encoding="utf-8")
+    check("--round re-run keeps their scores", "| Good (m) | 7/10 CHANGES | - |" in scores, scores)
+
+    # The default output folder includes a hash of the repository path.
+    code, stdout, stderr = run_main("prepare", "--repo", str(repo))
+    default_out = Path(json.loads(next(
+        (p / "session.json").read_text(encoding="utf-8")
+        for p in (Path(tempfile.gettempdir()) / "council-review").glob(f"{repo.name}-*")
+        if (p / "session.json").is_file() and json.loads((p / "session.json").read_text(encoding="utf-8"))["repo"] == str(repo.resolve())
+    ))["out"])
+    check("default output folder has a repo hash", code == 0 and len(default_out.name.split("-")[1]) == 6, default_out.name)
+    run_main("cleanup", "--out", str(default_out), "--all")
 
     code, _, stderr = run_main("cleanup", "--out", str(repo), "--all")
     check("cleanup refuses a folder without a session", code == 1 and repo.is_dir(), stderr)

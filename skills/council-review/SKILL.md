@@ -2,7 +2,7 @@
 name: council-review
 description: Run a read-only council review of a pull request or local change through several independent agent CLIs (Claude Code, Codex, Antigravity, OpenCode), then verify and reconcile their findings, disagreements and scores. Use when the user says council, council review, multi-model review, second opinions, or asks several models to review a PR or diff.
 license: MIT
-compatibility: Python 3.13+ and git; gh for pull requests; at least one authenticated member CLI (claude, codex, agy, opencode). Sends the change to each member's model provider.
+compatibility: Python 3.13+ and git; gh for pull requests (GitHub API); at least one authenticated member CLI (claude, codex, agy, opencode). Sends the change to each member's model provider.
 ---
 
 # Council review
@@ -17,8 +17,10 @@ the mechanical work. Run it with `uv run` when available, otherwise `python3`.
 - Address known issues, outstanding PR comments and failing checks first, so the
   council reviews the real candidate. Skip fixes to code the user plans to discard.
 - Pick the members. Default: every member in `references/members.toml` except your
-  own provider (`--exclude-provider anthropic` when you are Claude, `openai` when you
-  are Codex, `google` when you are Antigravity/Gemini). You review independently anyway.
+  own provider: `--exclude-provider anthropic` when you are Claude, `openai` when you
+  are Codex or GPT, `google` when you are Antigravity or Gemini. Inside another harness
+  (OpenCode, Cursor and so on), exclude the provider of the model you run on, such as
+  `deepseek`. You review independently anyway.
 - If the user names members or models, use `--members` and `--member key=model`. If a
   named member is unavailable, report it. Never substitute another model.
 - Reasoning effort is one setting for all members: `--effort` (default `high`). Use
@@ -41,8 +43,9 @@ under the system temp folder unless you pass `--out`; never the repository itsel
 `brief.md` template. `prepare --in-place` reviews the checkout directly instead; use it
 only when the worktree cannot be built.
 
-Fill every `TODO(agent):` in `<out>/brief.md`: intent, scope, out of scope, checks run
-with results, known risks. `run` refuses a brief with markers left. Use `--blind` on
+Replace every line starting with `TODO(agent):` in `<out>/brief.md`: intent, scope,
+out of scope, checks run with results, known risks. `run` refuses a brief that still has
+one. Use `--blind` on
 `run` to hide the brief when you want reviewers unanchored by the author's framing.
 
 ## 2. Run a round
@@ -53,8 +56,12 @@ python3 <skill>/scripts/council.py run --out <out> --exclude-provider <yours>
 
 Members run in parallel with each CLI's read-only settings and a stdin or file prompt.
 `run --dry-run` checks every member's CLI and prints its command without running it.
-A round can take up to `--timeout` seconds (default 900) per member, so start it as a
-background job if your harness limits foreground commands, and wait for it to exit.
+A round can take up to `--timeout` seconds (default 900) per member and prints nothing
+until the first member finishes. If your harness limits foreground commands, run it in
+the background with its output sent to a log, for example
+`python3 <skill>/scripts/council.py run --out "<out>" ... > "<out>/run.log" 2>&1`, then
+wait until `<out>/round-N/results.json` exists, which is written last, or until the
+process exits. Quote `<out>` in shell commands; on Windows it contains backslashes.
 Each line `done <member> ...` is printed as a member finishes: read that answer
 (`<out>/round-N/<key>.md`) and verify it while the others run. Members read the
 throwaway worktree, so you may start fixes in the user's checkout meanwhile; after
@@ -67,9 +74,10 @@ checkout (listed in `worktree_changed`; it is a throwaway worktree unless you us
 
 `round-N/results.json` has, per member: `status` (`ok`, `unparsed`, `error`,
 `timeout`, `missing`), `verdict`, `score`, and parsed `findings` (severity, file, line,
-claim, fix). `<out>/scores.md` is the score table across rounds, one row per member, model
-and effort. Use it as-is: a
-member without a parsed score is `no score`. Never invent or adjust a score.
+claim, fix), plus `elapsed_s`. `<out>/scores.md` is the score table across rounds, one
+row per member, model and effort. Use it as-is: a member without a parsed score is
+`no score`. Never invent or adjust a score. `--round N --members <key>` re-runs one
+member in an existing round and keeps the others' results.
 
 ## 3. Verify and reconcile
 
@@ -81,8 +89,9 @@ flag pre-existing code. Sort the surviving findings into:
 - single-member findings that survive verification;
 - nits and out-of-scope items (list them, do not act on them).
 
-Record every finding's decision in `<out>/ledger.md` (fixed, disputed, declined,
-duplicate, out-of-scope).
+Record every finding's decision in `<out>/ledger.md`: fixed, deferred (verified but
+not fixed in this change, for example when the user asked for a review only), disputed,
+declined, duplicate or out-of-scope.
 
 ## 4. Fix and re-review
 
@@ -97,16 +106,17 @@ Resist scope creep: new ideas outside the change go in the report, not the code.
 
 Write `<out>/council-report.md` and give the user the same summary:
 
-- head commit reviewed and members excluded or unavailable;
-- the score table from `scores.md`, unchanged;
+- head commit reviewed, number of rounds, and members excluded or unavailable;
+- the score table from `scores.md`, unchanged, and each member's time;
 - recommendation, verified blockers and shoulds, disagreements and how you resolved
-  them, fixes made, declined findings;
+  them, fixes made, deferred and declined findings;
 - checks run and their results.
 
 Do not post a PR comment or review, or edit the PR description, unless the user asks.
 If they ask to record it on the PR, add a "Council review" section to the description
 with the rounds and score table. Finally run `council.py cleanup --out <out>` to remove
-the worktree (`--all` also deletes `<out>`).
+the worktree. It keeps `<out>` (rounds, report, ledger, any `dry-run/` folder) for
+inspection; `--all` deletes it too.
 
 Members run tools inside the reviewed code. For a PR from an untrusted author, note
 that a CLI may load project config or plugins from that checkout (see

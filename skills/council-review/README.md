@@ -35,6 +35,23 @@ Or copy or symlink this directory into your agent's skills folder.
 - The context, brief and patch are sent to each member's provider. Do not review
   changes containing secrets or data you cannot share with them.
 
+## Network and files
+
+The script itself only talks to GitHub: `gh` calls the GitHub API for `--pr`, and
+`git fetch <remote> pull/<n>/head` downloads the PR head when it is missing locally.
+Every other connection is made by the member CLIs to their own providers: Anthropic
+(Claude Code), OpenAI (Codex), Google (Antigravity) and the OpenCode provider for the
+configured model (`opencode-go`). Each CLI uses its own sign-in.
+
+Files written:
+
+- the output folder, under the system temp folder by default;
+- a detached `git worktree` in the output folder, registered in the repository's
+  `.git/worktrees/` until `cleanup` removes it;
+- PR objects fetched into the repository's object store.
+
+Nothing is written to your checkout unless you use `prepare --in-place`.
+
 ## Use
 
 ```bash
@@ -81,7 +98,7 @@ Exit codes: 0 at least one usable review, 1 usage error, 2 no usable review,
 
 ## Output
 
-`<out>` defaults to `<temp>/council-review/<repo>-<pr-N|local-branch>`:
+`<out>` defaults to `<temp>/council-review/<repo>-<path-hash>-<pr-N|local-branch>`:
 
 - `session.json`, `context.md`, `diff.patch`, `brief.md`, `ledger.md`;
 - `checkout/`: the throwaway worktree, with the inputs copied to a fresh

@@ -317,12 +317,14 @@ def build_launcher(prompt_file: Path) -> str:
 
 # ----------------------------------------------------------------------- parsing
 
-_DECOR = r"[\s>*_#`]*"
+# Markdown decoration around a label, on the same line only.
+_DECOR = r"[ \t>*_#`]*"
 # The negative lookahead skips an echo of the template line "VERDICT: APPROVE or CHANGES".
 VERDICT_RE = re.compile(rf"^{_DECOR}VERDICT{_DECOR}:{_DECOR}(APPROVE|CHANGES)\b(?!\s+or\b)", re.I | re.M)
-# "7/10" or a bare "7"; "4/5" or "8/100" is another scale and is not a score.
+# "7/10", "7/10." or a bare "7"; "4/5" or "8/100" is another scale and is not a score.
 SCORE_RE = re.compile(
-    rf"^{_DECOR}SCORE{_DECOR}:{_DECOR}(\d+(?:\.\d+)?)(?![\d.])(?:\s*/\s*10(?![\d.])|(?!\s*/))", re.I | re.M
+    rf"^{_DECOR}SCORE{_DECOR}:{_DECOR}(\d+(?:\.\d+)?)(?!\d|\.\d)(?:[ \t]*/[ \t]*10(?!\d|\.\d)|(?![ \t]*/))",
+    re.I | re.M,
 )
 NONE_RE = re.compile(rf"^{_DECOR}FINDINGS{_DECOR}:{_DECOR}(?:none|no findings)\b", re.I | re.M)
 FINDING_RE = re.compile(r"^\s*(?:[-*]|\d+[.)])\s*[*_`]*\[(blocker|should|nit)\][*_`]*\s*(.+)$", re.I | re.M)
@@ -477,6 +479,7 @@ def run_member(
     }
     prompt_file = inputs / f"prompt-{key}.md"
     prompt = build_prompt(member["label"], inputs, checkout, blind)
+    prompt_file.unlink(missing_ok=True)  # never write through a planted link
     write_text(prompt_file, prompt)
     write_text(round_dir / f"prompt-{key}.md", prompt)
     final = round_dir / f"{key}.md"
@@ -598,7 +601,8 @@ def gh(repo: Path, *args: str) -> bytes:
 
 BRIEF_TEMPLATE = """# Review brief
 
-<!-- Replace every TODO(agent) marker below. council.py run refuses a brief that still has one. -->
+<!-- Replace each placeholder line below with real content. council.py run refuses a brief
+that still has a placeholder. -->
 
 ## Intent
 
@@ -623,7 +627,8 @@ TODO(agent): or "None".
 
 LEDGER_TEMPLATE = """# Council ledger
 
-Decision is one of fixed, disputed, declined, duplicate or out-of-scope.
+Decision is one of fixed, deferred (verified, not fixed in this change), disputed,
+declined, duplicate or out-of-scope.
 
 | Round | Member(s) | Finding | Decision | Evidence or change |
 |---|---|---|---|---|
@@ -640,16 +645,23 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     else:
         branch = git_text(repo, "branch", "--show-current") or "detached"
         label = f"local-{branch}"
-    out = (args.out or Path(tempfile.gettempdir()) / "council-review" / f"{repo.name}-{safe_label(label)}").resolve()
+    # The repo path hash keeps two checkouts with the same folder name apart.
+    repo_id = hashlib.sha256(str(repo).lower().encode("utf-8")).hexdigest()[:6]
+    default_out = Path(tempfile.gettempdir()) / "council-review" / f"{repo.name}-{repo_id}-{safe_label(label)}"
+    out = (args.out or default_out).resolve()
     check_out_folder(out, repo)
+    previous = out / "session.json"
+    if out.is_dir() and any(out.iterdir()) and not previous.is_file():
+        raise CouncilError(f"--out {out} is a non-empty folder without a council session; use a new folder")
     out.mkdir(parents=True, exist_ok=True)
     checkout = out / "checkout"
 
-    previous = out / "session.json"
-    if previous.is_file():
-        old = json.loads(previous.read_text(encoding="utf-8"))
-        if old.get("worktree"):
-            remove_worktree(Path(old.get("repo", repo)), Path(old["checkout"]))
+    def reset_previous() -> None:
+        """Drop the previous round's worktree, only once the new inputs are known to be good."""
+        if previous.is_file():
+            old = json.loads(previous.read_text(encoding="utf-8"))
+            if old.get("worktree"):
+                remove_worktree(Path(old.get("repo", repo)), Path(old["checkout"]))
 
     out_rel = relative_inside(out, repo)
     skip = [out_rel] if out_rel else []
@@ -684,12 +696,14 @@ def cmd_prepare(args: argparse.Namespace) -> int:
         if args.in_place:
             if (git_head(repo) or "").lower() != head.lower():
                 raise CouncilError(f"--in-place needs {repo} checked out at the PR head {head}")
+            reset_previous()
             checkout = repo
         else:
             try:
                 git(repo, "cat-file", "-e", f"{head}^{{commit}}")
             except CouncilError:
                 git(repo, "fetch", "--quiet", args.remote, f"pull/{args.pr}/head")
+            reset_previous()
             git(repo, "worktree", "add", "--detach", "--quiet", str(checkout), head)
     else:
         base_ref = args.base or "HEAD"
@@ -703,9 +717,11 @@ def cmd_prepare(args: argparse.Namespace) -> int:
         files = sorted({p for p in names.split("\0") if p} | set(untracked))
         session.update(mode="local", base=base_ref, merge_base=merge_base, head=head, branch=label[6:])
         if args.in_place:
+            reset_previous()
             checkout = repo
         else:
             apply_patch = local_diff(repo, "HEAD", untracked, binary=True)
+            reset_previous()
             git(repo, "worktree", "add", "--detach", "--quiet", str(checkout), head)
             if apply_patch.strip():
                 patch_file = out / "working-tree.patch"
@@ -728,6 +744,8 @@ def cmd_prepare(args: argparse.Namespace) -> int:
     if not (out / "ledger.md").exists():
         write_text(out / "ledger.md", LEDGER_TEMPLATE)
     session["fingerprint"] = fingerprint(snapshot(checkout, snapshot_ignore(session)))
+    if session["fingerprint"] is None:
+        raise CouncilError(f"cannot read git status in {checkout}; the change check would be blind")
     save_json(out / "session.json", session)
 
     say(f"prepared {label} at {head[:12]}")
@@ -848,7 +866,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         raise CouncilError(f"{checkout} is at {head}, expected {session['head']}; re-run prepare")
     ignore = snapshot_ignore(session)
     before = snapshot(checkout, ignore)
-    if fingerprint(before) != session.get("fingerprint"):
+    if before is None or session.get("fingerprint") is None:
+        raise CouncilError(f"cannot read git status in {checkout}; re-run prepare")
+    if fingerprint(before) != session["fingerprint"]:
         raise CouncilError(f"{checkout} changed since prepare (an earlier member or an edit); re-run prepare")
     if session["mode"] == "pr" and not args.dry_run:
         try:
@@ -910,6 +930,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         return EXIT_OK if any(r["status"] == "planned" for r in ordered) else EXIT_NO_REVIEWS
 
     changed = changed_paths(before, snapshot(checkout, ignore))
+    # Re-running some members in an existing round (--round N) keeps the other members' results.
+    previous_path = round_dir / "results.json"
+    if previous_path.is_file():
+        try:
+            earlier = json.loads(previous_path.read_text(encoding="utf-8")).get("results", [])
+        except ValueError:
+            earlier = []
+        rerun = {r["key"] for r in ordered}
+        ordered = [r for r in earlier if r.get("key") not in rerun] + ordered
     payload = {
         "round": number,
         "mode": session["mode"],
