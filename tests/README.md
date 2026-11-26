@@ -40,5 +40,9 @@ weekly and on demand:
 uv run tests/mk-tech-shop-search/live_smoke.py
 ```
 
+Some shops block GitHub's runners, so the workflow passes them as `--unreachable`:
+their results are printed as `skip` and do not fail the job. A local run checks every
+shop.
+
 `tests/test_skill_meta.py` also prints a `warn` line, without failing, for facts in a
 skill dated "as of" more than 90 days ago. Re-check them and update the date.
