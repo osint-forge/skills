@@ -240,9 +240,15 @@ aliased = council.parse_review(
     "- [major] b.py:2 - B. Fix: b\n- [MINOR] c.py:3 - C. Fix: c\n- [low] d.py:4 - D. Fix: d\n"
 )
 check(
-    "parse: critical/major/minor map onto blocker/should/nit; unknown labels are skipped",
-    [f["severity"] for f in aliased["findings"]] == ["blocker", "should", "nit"],
+    "parse: critical/major/minor map onto blocker/should/nit; other labels are kept as unknown",
+    [f["severity"] for f in aliased["findings"]] == ["blocker", "should", "nit", "unknown"]
+    and aliased["findings"][3]["label"] == "low"
+    and aliased["findings"][3]["file"] == "d.py",
     aliased["findings"],
+)
+check(
+    "parse: task-list checkboxes are not findings",
+    council.parse_review("VERDICT: APPROVE\nFINDINGS: none\n- [x] tests pass\n- [ ] docs\n")["findings"] == [],
 )
 check("parse: score with a trailing period", council.parse_review("VERDICT: CHANGES\nSCORE: 8/10.")["score"] == 8)
 check("parse: decimal score is still one number", council.parse_review("VERDICT: CHANGES\nSCORE: 8.5/10")["score"] == 8.5)

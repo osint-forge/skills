@@ -148,10 +148,15 @@ def main():
     for path in sorted(set(srcs)):
         if not os.path.isfile(path) or not path.startswith(SKILLS):
             continue
+        rel = os.path.relpath(path, ROOT)
         for date in re.findall(r"\bas of (\d{4}-\d{2}-\d{2})\b", read(path)):
-            age = (today - datetime.date.fromisoformat(date)).days
+            try:
+                age = (today - datetime.date.fromisoformat(date)).days
+            except ValueError:
+                check(f"{rel}: 'as of {date}' is a real date", False, date)
+                continue
             if age > STALE_DAYS:
-                stale.setdefault(os.path.relpath(path, ROOT), set()).add(date)
+                stale.setdefault(rel, set()).add(date)
     for rel, dates in stale.items():
         print(f"warn {rel}: facts dated {', '.join(sorted(dates))} are over {STALE_DAYS} days old")
 

@@ -54,6 +54,9 @@ Nothing is written to your checkout unless you use `prepare --in-place`.
 
 ## Use
 
+The script needs only the standard library. Without uv, replace `uv run` with
+`python3` (on Windows `python` or `py -3`).
+
 ```bash
 # 1. Scope the change: a PR, or the local branch plus uncommitted work.
 uv run scripts/council.py prepare --pr 123

@@ -75,7 +75,8 @@ checkout (listed in `worktree_changed`; it is a throwaway worktree unless you us
 
 `round-N/results.json` has, per member: `status` (`ok`, `unparsed`, `error`,
 `timeout`, `missing`), `verdict`, `score`, and parsed `findings` (severity, file, line,
-claim, fix), plus `elapsed_s`. `<out>/scores.md` is the score table across rounds, one
+claim, fix), plus `elapsed_s`. A finding with a label outside blocker, should, nit,
+critical, major and minor has severity `unknown` and its raw `label`; judge it yourself. `<out>/scores.md` is the score table across rounds, one
 row per member, model and effort. Use it as-is: a member without a parsed score is
 `no score`. Never invent or adjust a score. `--round N --members <key>` re-runs one
 member in an existing round and keeps the others' results.

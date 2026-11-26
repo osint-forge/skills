@@ -17,15 +17,15 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MKSHOP = os.path.join(ROOT, "skills", "mk-tech-shop-search", "scripts", "mkshop.py")
-# Fields every search record should carry; a shop where most records miss one has
-# probably changed its API or page structure.
-CORE = ("title", "url", "price_mkd")
+# Share of records that must carry each field; a shop far below it has probably changed
+# its API or page structure. Price is looser: some shops list "ask for price" items.
+CORE = {"title": 0.95, "url": 0.95, "price_mkd": 0.5}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--query", default="logitech", help="a brand every shop carries")
-    ap.add_argument("--min-filled", type=float, default=0.8, help="share of records with each core field")
+    ap.add_argument("--min-filled", type=float, help="override every field's required share (0-1)")
     a = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -49,9 +49,9 @@ def main() -> int:
             problems.append(f"status {st['status']}: {st.get('message')}")
         elif not recs:
             problems.append(f"no results for {a.query!r}")
-        for field in CORE:
+        for field, share in CORE.items():
             filled = sum(1 for r in recs if r.get(field) not in (None, ""))
-            if recs and filled / len(recs) < a.min_filled:
+            if recs and filled / len(recs) < (share if a.min_filled is None else a.min_filled):
                 problems.append(f"{field} filled in {filled}/{len(recs)}")
         line = "; ".join(problems) or f"{len(recs)} results"
         print(("FAIL " if problems else "ok   ") + f"{key:<12} {line}")
