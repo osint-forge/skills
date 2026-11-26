@@ -335,8 +335,13 @@ SCORE_RE = re.compile(
 NONE_RE = re.compile(rf"^{_DECOR}FINDINGS{_DECOR}:{_DECOR}(?:none|no findings)\b", re.I | re.M)
 # Whitespace is [ \t] and the body starts with \S, so no two parts can match the same text.
 FINDING_RE = re.compile(
-    r"^[ \t]*(?:[-*]|\d+[.)])[ \t]*[*_`]*\[(blocker|should|nit)\][*_`]*[ \t]*(\S.*)$", re.I | re.M
+    r"^[ \t]*(?:[-*]|\d+[.)])[ \t]*[*_`]*\[([A-Za-z][\w-]{1,19})\][*_`]*[ \t]*(\S.*)$",
+    re.M,
 )
+SEVERITIES = {"blocker", "should", "nit"}
+# Reviewers sometimes fall back to a common severity scale; map the unambiguous labels
+# onto ours. Any other label is kept as "unknown" (with the raw label) for the host to judge.
+SEVERITY_ALIASES = {"critical": "blocker", "major": "should", "minor": "nit"}
 LOCATION_RE = re.compile(r"^`?(?P<file>[^\s`]+?):(?P<line>\d+)(?:[-–]\d+)?`?\s*(?:[-–—:]\s*)?")
 FIX_RE = re.compile(r"\bFix:", re.I)
 
@@ -360,7 +365,11 @@ def parse_review(text: str) -> dict:
     for match in FINDING_RE.finditer(section):
         body = match.group(2).strip()
         claim, fix = (FIX_RE.split(body, maxsplit=1) + [""])[:2]
-        finding = {"severity": match.group(1).lower(), "file": None, "line": None}
+        label = match.group(1).lower()
+        severity = SEVERITY_ALIASES.get(label, label)
+        finding = {"severity": severity if severity in SEVERITIES else "unknown", "file": None, "line": None}
+        if finding["severity"] == "unknown":
+            finding["label"] = label
         location = LOCATION_RE.match(claim)
         if location:
             finding["file"] = location.group("file")

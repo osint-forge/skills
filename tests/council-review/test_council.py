@@ -235,6 +235,21 @@ check(
 check("failed snapshot counts as a change", council.changed_paths({"HEAD": "x"}, None) == [council.SNAPSHOT_FAILED])
 spill = council.parse_review("VERDICT: CHANGES\nSCORE:\n1) [should] a.py:1 - Bug. Fix: fix\n")
 check("parse: an empty SCORE line does not read the next line", spill["score"] is None and len(spill["findings"]) == 1, spill)
+aliased = council.parse_review(
+    "VERDICT: CHANGES\nSCORE: 4/10\nFINDINGS:\n- [Critical] a.py:1 - A. Fix: a\n"
+    "- [major] b.py:2 - B. Fix: b\n- [MINOR] c.py:3 - C. Fix: c\n- [low] d.py:4 - D. Fix: d\n"
+)
+check(
+    "parse: critical/major/minor map onto blocker/should/nit; other labels are kept as unknown",
+    [f["severity"] for f in aliased["findings"]] == ["blocker", "should", "nit", "unknown"]
+    and aliased["findings"][3]["label"] == "low"
+    and aliased["findings"][3]["file"] == "d.py",
+    aliased["findings"],
+)
+check(
+    "parse: task-list checkboxes are not findings",
+    council.parse_review("VERDICT: APPROVE\nFINDINGS: none\n- [x] tests pass\n- [ ] docs\n")["findings"] == [],
+)
 check("parse: score with a trailing period", council.parse_review("VERDICT: CHANGES\nSCORE: 8/10.")["score"] == 8)
 check("parse: decimal score is still one number", council.parse_review("VERDICT: CHANGES\nSCORE: 8.5/10")["score"] == 8.5)
 comment = council.BRIEF_TEMPLATE.split("-->")[0]

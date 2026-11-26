@@ -5,6 +5,7 @@
 """Repository-wide checks for every skill under skills/: portable frontmatter, naming,
 documentation limits, local links, a catalogue row in the root README, and hidden text.
 Run: python3 -B tests/test_skill_meta.py"""
+import datetime
 import glob
 import os
 import re
@@ -15,6 +16,7 @@ sys.dont_write_bytecode = True
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SKILLS = os.path.join(ROOT, "skills")
 FAILS = 0
+STALE_DAYS = 90
 
 
 def check(name, cond, info=""):
@@ -138,6 +140,25 @@ def main():
             ):
                 hidden.append(f"{os.path.relpath(path, ROOT)}:{line_no}")
     check("no invisible or bidi characters in skills, docs or tests", not hidden, hidden[:10])
+
+    # Dated facts ("as of 2026-10-03") drift. Old ones are a warning, not a failure, so
+    # the suite stays deterministic; re-check the fact and bump its date.
+    today = datetime.date.today()
+    stale = {}
+    for path in sorted(set(srcs)):
+        if not os.path.isfile(path) or not path.startswith(SKILLS):
+            continue
+        rel = os.path.relpath(path, ROOT)
+        for date in re.findall(r"\bas of (\d{4}-\d{2}-\d{2})\b", read(path)):
+            try:
+                age = (today - datetime.date.fromisoformat(date)).days
+            except ValueError:
+                check(f"{rel}: 'as of {date}' is a real date", False, date)
+                continue
+            if age > STALE_DAYS:
+                stale.setdefault(rel, set()).add(date)
+    for rel, dates in stale.items():
+        print(f"warn {rel}: facts dated {', '.join(sorted(dates))} are over {STALE_DAYS} days old")
 
     print(f"\n{FAILS} failure(s)")
     return 1 if FAILS else 0

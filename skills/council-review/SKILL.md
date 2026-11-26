@@ -10,7 +10,8 @@ compatibility: Python 3.13+ and git; gh for pull requests (GitHub API); at least
 Independent reviewers from different model providers read the same change in a
 throwaway worktree. You scope the change, verify what they report, fix what holds up,
 and report scores without inventing any. `scripts/council.py` (next to this file) does
-the mechanical work. Run it with `uv run` when available, otherwise `python3`.
+the mechanical work. Run it with `uv run` when available, otherwise `python3` (on Windows
+`python` or `py -3`); it needs only the standard library.
 
 ## 0. Before you start
 
@@ -31,8 +32,8 @@ the mechanical work. Run it with `uv run` when available, otherwise `python3`.
 ## 1. Prepare
 
 ```bash
-python3 <skill>/scripts/council.py prepare --pr 123          # a GitHub PR (needs gh)
-python3 <skill>/scripts/council.py prepare --base origin/main # local branch + uncommitted work
+uv run <skill>/scripts/council.py prepare --pr 123          # a GitHub PR (needs gh)
+uv run <skill>/scripts/council.py prepare --base origin/main # local branch + uncommitted work
 ```
 
 `--pr` reviews the PR's head commit and GitHub diff. `--base` defaults to `HEAD`
@@ -51,7 +52,7 @@ one. Use `--blind` on
 ## 2. Run a round
 
 ```bash
-python3 <skill>/scripts/council.py run --out <out> --exclude-provider <yours>
+uv run <skill>/scripts/council.py run --out <out> --exclude-provider <yours>
 ```
 
 Members run in parallel with each CLI's read-only settings and a stdin or file prompt.
@@ -59,7 +60,7 @@ Members run in parallel with each CLI's read-only settings and a stdin or file p
 A round can take up to `--timeout` seconds (default 900) per member and prints nothing
 until the first member finishes. If your harness limits foreground commands, run it in
 the background with its output sent to a log, for example
-`python3 <skill>/scripts/council.py run --out "<out>" ... > "<out>/run.log" 2>&1`, then
+`uv run <skill>/scripts/council.py run --out "<out>" ... > "<out>/run.log" 2>&1`, then
 wait until `<out>/round-N/results.json` exists, which is written last, or until the
 process exits. Quote `<out>` in shell commands; on Windows it contains backslashes.
 Each line `done <member> ...` is printed as a member finishes: read that answer
@@ -74,7 +75,8 @@ checkout (listed in `worktree_changed`; it is a throwaway worktree unless you us
 
 `round-N/results.json` has, per member: `status` (`ok`, `unparsed`, `error`,
 `timeout`, `missing`), `verdict`, `score`, and parsed `findings` (severity, file, line,
-claim, fix), plus `elapsed_s`. `<out>/scores.md` is the score table across rounds, one
+claim, fix), plus `elapsed_s`. A finding with a label outside blocker, should, nit,
+critical, major and minor has severity `unknown` and its raw `label`; judge it yourself. `<out>/scores.md` is the score table across rounds, one
 row per member, model and effort. Use it as-is: a member without a parsed score is
 `no score`. Never invent or adjust a score. `--round N --members <key>` re-runs one
 member in an existing round and keeps the others' results.
