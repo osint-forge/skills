@@ -56,15 +56,15 @@ Nothing is written to your checkout unless you use `prepare --in-place`.
 
 ```bash
 # 1. Scope the change: a PR, or the local branch plus uncommitted work.
-python3 scripts/council.py prepare --pr 123
-python3 scripts/council.py prepare --base origin/main
+uv run scripts/council.py prepare --pr 123
+uv run scripts/council.py prepare --base origin/main
 
 # 2. Fill <out>/brief.md, then run a round.
-python3 scripts/council.py run --out <out> --exclude-provider anthropic
+uv run scripts/council.py run --out <out> --exclude-provider anthropic
 
 # 3. After fixes, prepare again with the same --out and run the next round.
 # 4. Remove the worktree (and with --all, the output folder).
-python3 scripts/council.py cleanup --out <out>
+uv run scripts/council.py cleanup --out <out>
 ```
 
 `prepare` flags:
