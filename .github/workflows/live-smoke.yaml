@@ -1,0 +1,35 @@
+name: Live smoke
+
+# Searches every shop once a week, so an API or bot-protection change shows up as a
+# failed run instead of a user's broken answer. Not run on pushes or PRs: CI stays offline.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mk-tech-shop-search:
+    name: mk-tech-shop-search
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install client dependencies
+        run: python -m pip install requests beautifulsoup4
+
+      - name: Search every shop
+        run: python -B tests/mk-tech-shop-search/live_smoke.py
