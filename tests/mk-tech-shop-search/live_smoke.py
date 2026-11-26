@@ -26,7 +26,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--query", default="logitech", help="a brand every shop carries")
     ap.add_argument("--min-filled", type=float, help="override every field's required share (0-1)")
+    ap.add_argument(
+        "--unreachable", default="",
+        help="comma-separated shops known to block this network; their failures are reported, not counted",
+    )
     a = ap.parse_args()
+    unreachable = {k.strip() for k in a.unreachable.split(",") if k.strip()}
 
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "smoke.json")
@@ -54,6 +59,10 @@ def main() -> int:
             if recs and filled / len(recs) < (share if a.min_filled is None else a.min_filled):
                 problems.append(f"{field} filled in {filled}/{len(recs)}")
         line = "; ".join(problems) or f"{len(recs)} results"
+        if key in unreachable:
+            note = "" if problems else " (reachable now; consider removing it from --unreachable)"
+            print(f"skip {key:<12} {line}{note}")
+            continue
         print(("FAIL " if problems else "ok   ") + f"{key:<12} {line}")
         if problems:
             failures.append(key)
